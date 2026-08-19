@@ -26,6 +26,7 @@ justamente porque si dependiera de eso no se iba a actualizar nunca.
 | **⋯ → Para delegar** | Todo lo que hiciste vos y tenía otro dueño, agrupado por persona. |
 | **⋯ → Indicadores** | Los 3 números que te tocan, con su evolución mensual. |
 | **⋯ → Ficha de Rol** | Las 7 decisiones, la tabla de delegación y las 5 reglas, solo lectura. |
+| **⋯ → Cómo se usa** | El instructivo, adentro de la app: los tres momentos del día, los viernes, y qué hacer cuando la app te frena. |
 
 Cosas que la app hace sola, sin que haya que configurarlas:
 
@@ -160,6 +161,18 @@ npm run iconos                 # regenera los íconos PNG (sin dependencias)
 ```
 
 Requiere Node 24 (lo pide Angular 22).
+
+### Actualizar la app
+
+La app se actualiza sola al abrirla, pero con una PWA instalada eso puede tardar un ciclo. En
+**Ajustes → Versión de la app** están los dos controles manuales:
+
+- **Buscar ahora** — consulta si hay una versión nueva publicada y la instala.
+- **Forzar recarga completa** — borra el service worker y todo lo cacheado y baja la app de cero.
+  Ninguna de las dos toca los datos.
+
+Cuando el service worker detecta una versión nueva por su cuenta, aparece una barra arriba con el
+botón para instalarla.
 
 ### Estructura
 

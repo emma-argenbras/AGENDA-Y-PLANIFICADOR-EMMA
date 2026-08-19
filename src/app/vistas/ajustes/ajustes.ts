@@ -8,6 +8,7 @@ import { Datos } from '../../data/datos';
 import { Drive } from '../../data/drive';
 import { Firebase } from '../../data/firebase';
 import { AvisosPush } from '../../data/avisos-push';
+import { Actualizador } from '../../data/actualizador';
 import { Avisos } from '../../ui/avisos';
 import { Dialogo } from '../../ui/dialogo';
 import { Tema, type Preferencia } from '../../ui/tema';
@@ -26,6 +27,7 @@ export class Ajustes {
   protected readonly drive = inject(Drive);
   protected readonly push = inject(AvisosPush);
   protected readonly tema = inject(Tema);
+  protected readonly actualizador = inject(Actualizador);
   private readonly avisos = inject(Avisos);
 
   protected readonly temas: { id: Preferencia; texto: string }[] = [
@@ -181,11 +183,11 @@ export class Ajustes {
     this.avisos.mostrar('Listo, todo limpio.');
   }
 
-  protected async buscarActualizacion(): Promise<void> {
-    const regs = (await navigator.serviceWorker?.getRegistrations?.()) ?? [];
-    for (const r of regs) await r.update();
-    this.avisos.mostrar('Buscando versión nueva…');
-    setTimeout(() => location.reload(), 1200);
+  protected readonly confirmandoReinstalar = signal(false);
+
+  protected fechaPublicada(): string {
+    const d = this.actualizador.publicada();
+    return d ? d.toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
   }
 }
 

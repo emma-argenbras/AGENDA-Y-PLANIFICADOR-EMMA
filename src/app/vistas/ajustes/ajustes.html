@@ -142,16 +142,61 @@
 
   @if (error()) { <p class="error">{{ error() }}</p> }
 
+  <!-- ── Versión ────────────────────────────────────────────────────────── -->
+  <h2 class="seccion">Versión de la app</h2>
+  <div class="tarjeta">
+    <div class="fila sep">
+      <div class="crece">
+        <span class="fuerte">Publicada: {{ fechaPublicada() }}</span>
+        <div class="mini">
+          @switch (actualizador.estado()) {
+            @case ('buscando') { Buscando… }
+            @case ('al-dia') { {{ actualizador.detalle() }} }
+            @case ('hay-nueva') { {{ actualizador.detalle() }} }
+            @case ('error') { {{ actualizador.detalle() }} }
+            @case ('sin-service-worker') { Abrila desde la pantalla de inicio para que se actualice sola. }
+            @default { Tocá «Buscar ahora» para ver si hay algo nuevo. }
+          }
+        </div>
+      </div>
+      @if (actualizador.estado() === 'al-dia') { <span class="tilde">✓</span> }
+    </div>
+
+    <div class="btn-fila" style="margin-top:12px">
+      @if (actualizador.estado() === 'hay-nueva') {
+        <button class="btn primario" type="button" (click)="actualizador.aplicar()">Instalar la versión nueva</button>
+      } @else {
+        <button class="btn primario" type="button"
+                [disabled]="actualizador.estado() === 'buscando'"
+                (click)="actualizador.buscar()">
+          {{ actualizador.estado() === 'buscando' ? 'Buscando…' : 'Buscar ahora' }}
+        </button>
+      }
+      <button class="btn" type="button" (click)="confirmandoReinstalar.set(true)">Forzar recarga completa</button>
+    </div>
+
+    <p class="mini" style="margin:12px 0 0">
+      «Buscar ahora» consulta si hay una versión nueva publicada. «Forzar recarga completa» baja la
+      app entera de cero: sirve cuando algo quedó raro. Ninguna de las dos toca tus datos.
+    </p>
+  </div>
+
   <h2 class="seccion">Sobre la app</h2>
   <div class="tarjeta">
-    <p class="mini">
+    <p class="mini" style="margin:0">
       Agenda EVB — uso personal, un solo usuario. La Ficha de Rol, la tabla de delegación, las 8
       categorías y los 4 umbrales están escritos en el código y versionados en el repositorio.
       No se editan desde acá por diseño.
     </p>
-    <button class="btn chico fantasma" type="button" (click)="buscarActualizacion()">Buscar actualización</button>
   </div>
 }
+
+<app-dialogo [abierto]="confirmandoReinstalar()" titulo="¿Bajar la app de nuevo?"
+             bajada="Se borra lo descargado y se vuelve a bajar todo. Tus cierres, prioridades y actas no se tocan."
+             (cerrar)="confirmandoReinstalar.set(false)">
+  <button pie class="btn primario" type="button" (click)="actualizador.reinstalar()">Sí, bajar de nuevo</button>
+  <button pie class="btn" type="button" (click)="confirmandoReinstalar.set(false)">Cancelar</button>
+</app-dialogo>
 
 <app-dialogo [abierto]="ayudaFirebase()" titulo="Crear el proyecto de Firebase (una sola vez)"
              (cerrar)="ayudaFirebase.set(false)">

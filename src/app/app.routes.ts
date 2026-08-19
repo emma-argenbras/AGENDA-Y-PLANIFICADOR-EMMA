@@ -10,6 +10,7 @@ export const routes: Routes = [
   { path: 'delegar', title: 'Para delegar', loadComponent: () => import('./vistas/delegar/delegar').then(m => m.Delegar) },
   { path: 'reglas', title: 'Ficha de Rol', loadComponent: () => import('./vistas/reglas/reglas').then(m => m.Reglas) },
   { path: 'indicadores', title: 'Indicadores', loadComponent: () => import('./vistas/indicadores/indicadores').then(m => m.Indicadores) },
+  { path: 'ayuda', title: 'Cómo se usa', loadComponent: () => import('./vistas/ayuda/ayuda').then(m => m.Ayuda) },
   { path: 'ajustes', title: 'Ajustes', loadComponent: () => import('./vistas/ajustes/ajustes').then(m => m.Ajustes) },
   { path: '**', redirectTo: 'hoy' },
 ];

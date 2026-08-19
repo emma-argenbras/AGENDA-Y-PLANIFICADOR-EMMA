@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs';
 import { Datos } from './data/datos';
 import { Avisos } from './ui/avisos';
+import { Actualizador } from './data/actualizador';
 import { estadoPrueba } from './core/prueba-luciana';
 import { hoyISO } from './core/fechas';
 
@@ -19,6 +20,7 @@ export class App {
   private readonly datos = inject(Datos);
   private readonly router = inject(Router);
   protected readonly avisos = inject(Avisos);
+  protected readonly actualizador = inject(Actualizador);
 
   protected readonly tabs: Tab[] = [
     { ruta: '/hoy', texto: 'Hoy', icono: 'M12 3v18M3 12h18' },

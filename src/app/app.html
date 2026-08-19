@@ -21,6 +21,10 @@
       <span class="fuerte">Indicadores</span>
       <span class="mini">Los 3 números que te tocan</span>
     </a>
+    <a routerLink="/ayuda" (click)="cerrarMenu()">
+      <span class="fuerte">Cómo se usa</span>
+      <span class="mini">El instructivo, en dos minutos</span>
+    </a>
     <a routerLink="/reglas" (click)="cerrarMenu()">
       <span class="fuerte">Ficha de Rol</span>
       <span class="mini">Decisiones, tabla y reglas</span>
@@ -30,6 +34,13 @@
       <span class="mini">Nube, Drive, avisos y backup</span>
     </a>
   </nav>
+}
+
+@if (actualizador.estado() === 'hay-nueva') {
+  <div class="barra-version" role="status">
+    <span class="crece">Hay una versión nueva de la app.</span>
+    <button type="button" (click)="actualizador.aplicar()">Actualizar</button>
+  </div>
 }
 
 <main>

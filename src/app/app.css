@@ -82,3 +82,28 @@ main { padding: 0 16px 28px; max-width: 720px; margin: 0 auto; }
   background: var(--critico);
   border: 1.5px solid var(--superficie);
 }
+
+.barra-version {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 720px;
+  margin: 0 auto 12px;
+  padding: 11px 14px;
+  background: var(--acento);
+  color: var(--acento-tinta);
+  border-radius: var(--r-chico);
+  font-size: 14px;
+  font-weight: 560;
+}
+.barra-version button {
+  border: 0;
+  background: var(--acento-tinta);
+  color: var(--acento);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}

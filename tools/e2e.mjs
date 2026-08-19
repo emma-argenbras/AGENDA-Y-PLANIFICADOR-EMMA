@@ -170,6 +170,29 @@ await paso('las otras pantallas abren sin romperse', async () => {
   }
 });
 
+await paso('el instructivo abre desde el menú y los desplegables funcionan', async () => {
+  await p.goto(URL + '#/hoy');
+  await p.click('button[aria-label="Más pantallas"]');
+  await p.click('.menu a[href="#/ayuda"]');
+  await p.waitForSelector('h1:has-text("Cómo se usa")');
+  const t = await p.textContent('main');
+  if (!t.includes('¿qué te comió más horas hoy?')) throw new Error('falta el cierre de jornada');
+  if (!t.includes('NO ES TUYA')) throw new Error('falta la explicación del bloqueo');
+  await p.locator('.duda button').first().click();
+  await p.waitForSelector('.duda p');
+});
+
+await paso('ajustes: hay botón de actualización manual', async () => {
+  await p.goto(URL + '#/ajustes');
+  await p.waitForSelector('text=Versión de la app');
+  const publicada = await p.textContent('.tarjeta:has-text("Publicada")');
+  if (!/Publicada: \d/.test(publicada)) throw new Error('no muestra la fecha de la versión publicada');
+  await p.click('button:has-text("Buscar ahora")');
+  await p.locator('text=Ya tenés la última versión')
+    .or(p.locator('text=Hay una versión nueva'))
+    .first().waitFor({ timeout: 20000 });
+});
+
 await paso('ajustes: se puede cambiar el tema', async () => {
   await p.goto(URL + '#/ajustes');
   await p.click('.chip:has-text("Oscuro")');

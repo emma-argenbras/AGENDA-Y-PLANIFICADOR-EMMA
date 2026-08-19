@@ -1,0 +1,156 @@
+<p class="chico" style="margin:0 0 16px">
+  Treinta segundos a la noche, quince minutos los viernes y tres números por mes. Todo lo demás lo
+  hace sola.
+</p>
+
+<div class="tarjeta">
+  <h2>La regla de oro</h2>
+  <p class="chico" style="margin:0">
+    Se registra <strong>lo que pasó</strong>, no lo que estaba planificado. Si el bloque decía
+    «estrategia» pero terminaste cargando un pedido, esa hora es Ejecución operativa. La app lo
+    aplica sola y no te deja cambiarlo.
+  </p>
+</div>
+
+<h2 class="seccion">Tu día, en tres momentos</h2>
+
+<div class="tarjeta">
+  <div class="momento">
+    <span class="cuando">A la mañana</span>
+    <span class="dura">1 minuto</span>
+  </div>
+  <h3>Elegís 3 prioridades. Ni una más.</h3>
+  <p class="chico">
+    En <strong>Hoy</strong>, escribís hasta tres cosas. El límite es a propósito: si todo es
+    prioridad, nada lo es.
+  </p>
+  <p class="chico" style="margin:0">
+    Si ponés algo que tiene otro dueño, la app no lo deja entrar: te muestra de quién es y el único
+    botón es «pasárselo».
+  </p>
+</div>
+
+<div class="tarjeta">
+  <div class="momento">
+    <span class="cuando">Durante el día</span>
+    <span class="dura">0 minutos</span>
+  </div>
+  <h3>Nada. En serio.</h3>
+  <p class="chico" style="margin:0">
+    No hay que ir anotando. Como mucho, tocás el círculo de una prioridad cuando la terminás.
+  </p>
+</div>
+
+<div class="tarjeta">
+  <div class="momento">
+    <span class="cuando">A la noche</span>
+    <span class="dura">30 segundos</span>
+  </div>
+  <h3>Una frase: ¿qué te comió más horas hoy?</h3>
+  <p class="chico">
+    Escribís como se lo contarías a alguien, o tocás el micrófono y lo dictás. La app parte la
+    frase, le pone categoría a cada parte, reparte las horas y marca en rojo lo que tenía otro
+    dueño. Vos solo revisás las horas con + y −, y confirmás.
+  </p>
+  <p class="chico" style="margin:0">
+    Lo que quedó en rojo va solo a <a routerLink="/delegar">Para delegar</a>, agrupado por persona.
+    Esa lista es tu guion para la próxima reunión con cada uno.
+  </p>
+</div>
+
+<h2 class="seccion">Los viernes</h2>
+
+<div class="tarjeta">
+  <div class="momento">
+    <span class="cuando">Primero</span>
+    <span class="dura">15 minutos</span>
+  </div>
+  <h3>La revisión de la prueba</h3>
+  <p class="chico" style="margin:0">
+    En <a routerLink="/prueba">Prueba</a>, «Registrar» en el viernes que corresponda. Seis preguntas
+    de un toque. Si una revisión vence sin registrar, aparece en rojo: el acuerdo dice que si las
+    revisiones no se hacen, la prueba se cancela.
+  </p>
+</div>
+
+<div class="tarjeta">
+  <div class="momento">
+    <span class="cuando">Después</span>
+    <span class="dura">3 minutos</span>
+  </div>
+  <h3>Leer la semana</h3>
+  <p class="chico">En <a routerLink="/semana">Semana</a> hay cuatro controles con semáforo:</p>
+  <ul class="limpia">
+    <li class="chico"><strong>Marketing.</strong> Más de 6 hs semanales = falta contratar a alguien. Menos de 3 = nunca fue un problema real.</li>
+    <li class="chico"><strong>Ejecución operativa.</strong> Cualquier número arriba de cero es alerta: son horas que tu Ficha de Rol dice que no deberían existir.</li>
+    <li class="chico"><strong>Venta y clientes + Estrategia.</strong> Si sumadas no llegan al 40%, el rol de Director no se está ejerciendo.</li>
+    <li class="chico"><strong>Reuniones.</strong> El manual proyecta 16 hs semanales; acá ves el real contra ese número.</li>
+  </ul>
+  <p class="mini" style="margin:0">
+    Verde: seguís de largo. Amarillo: si se repite dos semanas, ya es un problema. Rojo: hay una
+    decisión para tomar esta semana. Gris: no cargaste lo suficiente — prefiere no saber antes que
+    inventarte un cero.
+  </p>
+</div>
+
+<h2 class="seccion">Una vez por mes</h2>
+<div class="tarjeta">
+  <p class="chico" style="margin:0">
+    En <a routerLink="/indicadores">Indicadores</a>: margen bruto consolidado, clientes nuevos con
+    segunda compra y caja proyectada a 60 días. Facturación y unidades no están, y no es un olvido:
+    esos números son de otros.
+  </p>
+</div>
+
+<h2 class="seccion">Cuando la app te dice que no</h2>
+<div class="tarjeta alerta">
+  <h3>1. «NO ES TUYA»</h3>
+  <p class="chico">
+    Cargaste como prioridad algo de la tabla de delegación. No se puede forzar: o lo reescribís, o
+    se lo pasás a quien corresponde. <em>Si lo puede hacer alguien que cobra menos que vos, no es
+    tuyo</em>, sin la excepción de «es más rápido si lo hago yo».
+  </p>
+  <h3>2. «Un solo nombre por tarea»</h3>
+  <p class="chico">
+    Si en un acta ponés dos nombres en «quién lo hace», la rechaza. Si aparece más de un
+    responsable, nadie es responsable.
+  </p>
+  <h3>3. «Sin acta, la reunión no cuenta»</h3>
+  <p class="chico" style="margin:0">
+    Una reunión sin los tres campos queda visible en rojo con los días que pasaron. El acta se
+    escribe el mismo día.
+  </p>
+</div>
+
+<h2 class="seccion">Dudas</h2>
+<div class="tarjeta">
+  @for (d of dudas; track d.pregunta) {
+    <div class="duda">
+      <button type="button" (click)="alternar(d.pregunta)" [attr.aria-expanded]="abierta() === d.pregunta">
+        <span>{{ d.pregunta }}</span>
+        <span class="signo">{{ abierta() === d.pregunta ? '−' : '+' }}</span>
+      </button>
+      @if (abierta() === d.pregunta) { <p class="chico">{{ d.respuesta }}</p> }
+    </div>
+  }
+</div>
+
+<h2 class="seccion">Tu primera semana</h2>
+<div class="tarjeta">
+  <p class="chico">
+    No intentes usar todo desde el lunes. El objetivo es uno solo: llegar al viernes con cinco
+    cierres de jornada cargados.
+  </p>
+  <ul class="limpia">
+    <li><span class="dia">Hoy</span><span class="chico">Instalala en el celular y hacé el cierre de esta noche. Nada más.</span></li>
+    <li><span class="dia">Día 2</span><span class="chico">3 prioridades a la mañana y el cierre a la noche. Si te rechaza una prioridad, prestá atención a cuál: ahí está el problema.</span></li>
+    <li><span class="dia">Día 3 y 4</span><span class="chico">Lo mismo, y registrá una reunión cerrando el acta el mismo día.</span></li>
+    <li><span class="dia">Viernes</span><span class="chico">Revisión de Luciana primero. Después mirá Semana con cinco días reales de datos.</span></li>
+    <li><span class="dia">Después</span><span class="chico">Recién ahí abrí Para delegar y llevá esa lista a la próxima reunión con cada uno.</span></li>
+  </ul>
+</div>
+
+<p class="mini" style="text-align:center;margin:24px 0 0">
+  Si en tres semanas no sostenés el cierre de la noche, el problema no es la app<br>
+  y no lo va a arreglar ninguna función nueva.
+</p>
