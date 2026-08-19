@@ -37,6 +37,27 @@ export class Actualizador {
       }
     });
     void this.leerFecha();
+    this.#revisarSolo();
+  }
+
+  #ultimaRevision = 0;
+
+  /**
+   * El service worker solo mira si hay algo nuevo cuando cargás la página, y
+   * una app instalada puede quedarse días sin cargar de cero. Entonces
+   * revisamos también cada media hora y cada vez que volvés a la app.
+   */
+  #revisarSolo(): void {
+    const revisar = async () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - this.#ultimaRevision < 10 * 60 * 1000) return;
+      this.#ultimaRevision = Date.now();
+      try { await this.sw.checkForUpdate(); } catch { /* sin señal */ }
+      void this.leerFecha();
+    };
+    setInterval(() => void revisar(), 30 * 60 * 1000);
+    document.addEventListener('visibilitychange', () => void revisar());
+    setTimeout(() => void revisar(), 5000);
   }
 
   /** Fecha de compilación de lo que hay publicado en el servidor. */
@@ -57,6 +78,7 @@ export class Actualizador {
     }
     this.estado.set('buscando');
     this.detalle.set('');
+    this.#ultimaRevision = Date.now();
     try {
       const hay = await this.sw.checkForUpdate();
       await this.leerFecha();
