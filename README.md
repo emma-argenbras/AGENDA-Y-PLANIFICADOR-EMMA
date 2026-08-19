@@ -86,28 +86,29 @@ gratis es Cloudflare Pages o Netlify, que publican desde repos privados.
 
 ---
 
-## Conectar Firebase (una sola vez, ~10 minutos)
+## Firebase
 
-Sin esto la app funciona igual, pero los datos quedan solo en ese teléfono.
+El proyecto es **agenda-y-planificador-emma** y su configuración ya está en
+`src/environments/environment.ts`, así que no hay que pegar nada en cada dispositivo.
 
-1. [console.firebase.google.com](https://console.firebase.google.com) → crear proyecto.
-2. **Firestore Database** → Crear base de datos → modo producción → región `southamerica-east1`.
-3. **Authentication** → Comenzar → habilitar **Google**.
-4. Authentication → Settings → **Authorized domains** → agregar `emma-argenbras.github.io`.
-5. Configuración del proyecto → Tus apps → **Web** → registrar la app y copiar el bloque
-   `firebaseConfig`.
-6. En la app: **Ajustes → pegar la configuración → Conectar proyecto → Entrar con Google**.
-7. Si ya venías usando la app en modo local: **Ajustes → Subir lo de este dispositivo**.
+Esos valores no son secretos: Firebase los publica para que se peguen en el código. Lo que protege
+los datos son dos cosas:
 
-Esos valores no son secretos (viajan en cualquier app web). Lo que protege los datos son las reglas:
+1. **`firestore.rules`** — sólo `emmanuelclubdelmate@gmail.com`, con el mail verificado, puede leer
+   y escribir, y sólo su propio árbol `usuarios/{uid}`. Todo lo demás está denegado.
+2. **Dominios autorizados** de Authentication — el login sólo funciona desde las direcciones
+   habilitadas.
 
-```bash
-npm i -g firebase-tools && firebase login
-firebase deploy --only firestore:rules      # publica firestore.rules
-```
+Para que la sincronización funcione hay que dejar tres cosas hechas en la consola:
 
-También se puede dejar la configuración fija en `src/environments/environment.ts` para no pegarla
-en cada dispositivo.
+- **Authentication → Comenzar → habilitar Google.** Sin esto el login falla con
+  `CONFIGURATION_NOT_FOUND`.
+- **Authentication → Settings → Authorized domains** → agregar `emma-argenbras.github.io`.
+- **Firestore → Reglas** → pegar el contenido de `firestore.rules` y Publicar (las reglas por
+  defecto niegan todo). Con la CLI: `firebase deploy --only firestore:rules`.
+
+Después, en la app: **Ajustes → Entrar**, y si ya venías usando la app en modo local,
+**Subir lo de este dispositivo**.
 
 ### Push con la app cerrada (opcional)
 
