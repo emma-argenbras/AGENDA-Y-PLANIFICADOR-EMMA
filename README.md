@@ -42,10 +42,11 @@ registro") en vez de mentir con ceros.
 
 ## Publicarla e instalarla en el celular
 
-1. **Mergear a `main`.** El workflow `.github/workflows/pages.yml` publica el repo entero en GitHub
-   Pages en cada push a `main`. (Antes del merge se puede publicar a mano desde la pestaña
-   *Actions* → *Deploy PWA a GitHub Pages* → *Run workflow*, eligiendo esta rama.)
-2. **Activar Pages una vez**: *Settings → Pages → Build and deployment → Source: **GitHub Actions***.
+1. **Activar Pages una vez**: *Settings → Pages → Build and deployment → Source: **GitHub Actions***.
+2. El workflow `.github/workflows/pages.yml` publica el repo entero en cada push a `main` o a una
+   rama `claude/**`. Como el repositorio todavía no tiene `main`, publica desde esta rama tal cual
+   está; cuando la mergees a `main`, sigue funcionando igual. También se puede disparar a mano desde
+   *Actions → Deploy PWA a GitHub Pages → Run workflow*.
 3. Queda en `https://emma-argenbras.github.io/AGENDA-Y-PLANIFICADOR-EMMA/`.
 4. En el celular: abrir esa URL en Chrome (Android) o Safari (iPhone) → *Agregar a pantalla de
    inicio*. Desde ahí abre a pantalla completa y funciona sin internet.
@@ -63,6 +64,21 @@ npm i -D playwright && node tools/e2e.mjs
 ```
 
 ---
+
+### Sobre la privacidad del repositorio
+
+El repositorio es **público**. Como la app es estática, las reglas de negocio (la tabla de
+delegación con los nombres del equipo, los umbrales y el detalle de la prueba de Luciana) se
+descargan al navegador y son legibles por cualquiera que tenga la dirección — eso pasa igual con el
+repo privado, porque el sitio publicado es público.
+
+Lo que **nunca** sale del teléfono son tus datos: los cierres de jornada, las prioridades, las actas
+y las revisiones viven solo en el dispositivo.
+
+Si preferís que el código no quede a la vista: *Settings → General → Danger Zone → Change
+visibility → Private*. Ojo que GitHub Pages desde un repositorio privado requiere plan Pro; la
+alternativa gratis es publicarlo en Cloudflare Pages o Netlify, que sí publican desde repos
+privados, y ahí además se le puede poner contraseña al sitio.
 
 ## Conectar la carpeta de Drive (trámite de 5 minutos, una sola vez)
 

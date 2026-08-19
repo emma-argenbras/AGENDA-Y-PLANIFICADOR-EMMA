@@ -2,7 +2,7 @@ name: Deploy PWA a GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'claude/**']   # el repo todavía no tiene main: publica también desde esta rama
   workflow_dispatch:
 
 permissions:
