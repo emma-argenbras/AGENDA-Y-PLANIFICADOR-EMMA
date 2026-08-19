@@ -1,0 +1,11 @@
+.nav { margin-bottom: 14px; }
+
+.tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 4px; }
+.tiles .tarjeta { margin: 0; }
+.tile .de { font-size: 17px; color: var(--tinta-3); font-weight: 500; }
+
+table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13.5px; }
+caption { text-align: left; margin-bottom: 8px; }
+th, td { text-align: left; padding: 7px 0; border-bottom: 1px solid var(--linea); }
+th { font-size: 12px; color: var(--tinta-3); font-weight: 650; }
+td:nth-child(2), td:nth-child(3), th:nth-child(2), th:nth-child(3) { text-align: right; }

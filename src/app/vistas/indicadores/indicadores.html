@@ -1,0 +1,58 @@
+<p class="chico" style="margin:0 0 14px">
+  Margen, recompra y caja a 60 días. Los otros números son de otros.
+</p>
+
+<button class="btn primario ancho" type="button" (click)="abrir()">
+  {{ cargadoEsteMes() ? 'Editar ' : '+ Cargar ' }}{{ mesLargo(mesActual) }}
+</button>
+
+@if (!hayDatos()) {
+  <div class="tarjeta" style="margin-top:12px">
+    <div class="vacio">
+      <div class="titulo">Sin datos todavía</div>
+      <div class="chico">Se carga una vez por mes. Tres números, treinta segundos.</div>
+    </div>
+  </div>
+}
+
+@for (ind of definiciones; track ind.id) {
+  @if (valores(ind.id).length) {
+    <h2 class="seccion">{{ ind.titulo }}</h2>
+    <div class="tarjeta">
+      <p class="mini" style="margin:0 0 12px">{{ ind.aclaracion }}</p>
+      @if (valores(ind.id).length > 1) {
+        <app-linea-tendencia [puntos]="serie(ind.id)" [maximo]="maximo(ind.id)" sufijo="" />
+      }
+      <ul class="limpia" style="margin-top:10px">
+        @for (v of valores(ind.id); track v.mes) {
+          <li class="fila sep">
+            <span class="chico">{{ mesLargo(v.mes) }}</span>
+            <span class="tabular">
+              {{ formato(ind.id, v.valor) }}
+              @if (v.delta !== null) {
+                <span class="mini">{{ v.delta >= 0 ? '▲' : '▼' }} {{ formato(ind.id, v.delta < 0 ? -v.delta : v.delta) }}</span>
+              }
+            </span>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+}
+
+<app-dialogo [abierto]="editando()" titulo="Indicadores del mes" (cerrar)="editando.set(false)">
+  <label class="campo">
+    <span>Mes</span>
+    <input type="month" [value]="mes()" (input)="mes.set($any($event.target).value)">
+  </label>
+  @for (ind of definiciones; track ind.id) {
+    <label class="campo">
+      <span>{{ ind.titulo }} ({{ ind.unidad }})</span>
+      <input type="number" inputmode="decimal" [value]="borrador()[ind.id]"
+             (input)="fijar(ind.id, $any($event.target).value)">
+      <span class="mini">{{ ind.aclaracion }}</span>
+    </label>
+  }
+  <button pie class="btn primario" type="button" (click)="guardar()">Guardar</button>
+  <button pie class="btn" type="button" (click)="editando.set(false)">Cancelar</button>
+</app-dialogo>

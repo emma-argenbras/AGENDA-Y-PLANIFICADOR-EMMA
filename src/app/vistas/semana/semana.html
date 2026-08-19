@@ -1,0 +1,119 @@
+<div class="fila sep nav">
+  <button class="btn chico" type="button" (click)="mover(-1)">‹ Anterior</button>
+  <span class="chico">{{ esSemanaActual() ? 'Semana actual' : rotulo() }}</span>
+  <button class="btn chico" type="button" [disabled]="esSemanaActual()" (click)="mover(1)">Siguiente ›</button>
+</div>
+
+<!-- ── Números de cabecera ──────────────────────────────────────────────── -->
+<div class="tiles">
+  <div class="tarjeta tile">
+    <div class="rotulo">Horas registradas</div>
+    <div class="cifra tabular">{{ totalHoras() }}</div>
+    <div class="mini">{{ rotulo() }}</div>
+  </div>
+  <div class="tarjeta tile">
+    <div class="rotulo">Días con cierre</div>
+    <div class="cifra tabular">{{ conCierre() }}<span class="de">/{{ habiles().length }}</span></div>
+    <div class="mini">días hábiles</div>
+  </div>
+  <div class="tarjeta tile">
+    <div class="rotulo">Rol de Director</div>
+    <div class="cifra tabular">@if (pctRol() !== null) { {{ pctRol() }}% } @else { — }</div>
+    <div class="mini">venta + estrategia · piso 40%</div>
+  </div>
+  <div class="tarjeta tile" [class.alerta]="horasFuga() > 0">
+    <div class="rotulo">No eran tuyas</div>
+    <div class="cifra tabular">{{ horasFuga() }}</div>
+    <div class="mini">horas con otro dueño</div>
+  </div>
+</div>
+
+<!-- ── Umbrales ─────────────────────────────────────────────────────────── -->
+<h2 class="seccion">Umbrales de control</h2>
+@for (u of umbrales(); track u.id) {
+  <div class="tarjeta" [class.alerta]="u.resultado.estado === 'rojo'">
+    <div class="fila sep" style="align-items:flex-start;gap:12px">
+      <h3 style="margin:0">{{ u.titulo }}</h3>
+      <app-semaforo [estado]="u.resultado.estado" />
+    </div>
+    <p style="margin:6px 0 0">{{ u.resultado.texto }}</p>
+    <p class="mini" style="margin:8px 0 0">{{ u.regla }}</p>
+  </div>
+}
+
+<!-- ── Reparto ──────────────────────────────────────────────────────────── -->
+<h2 class="seccion">En qué se fue la semana</h2>
+<div class="tarjeta">
+  <app-barras-categoria [porCategoria]="totales().porCategoria" [total]="totales().total" />
+  @if (totales().total > 0) {
+    <button class="btn chico fantasma" type="button" style="margin-top:14px"
+            (click)="verNumeros.set(!verNumeros())">
+      {{ verNumeros() ? 'Ocultar números' : 'Ver números' }}
+    </button>
+    @if (verNumeros()) {
+      <table>
+        <caption class="mini">Horas por categoría, semana del {{ rotulo() }}</caption>
+        <thead>
+          <tr><th scope="col">Categoría</th><th scope="col">Horas</th><th scope="col">%</th></tr>
+        </thead>
+        <tbody>
+          @for (f of filasNumeros(); track f.nombre) {
+            <tr><td>{{ f.nombre }}</td><td class="tabular">{{ f.horas }}</td><td class="tabular">{{ f.pct }}%</td></tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+</div>
+
+<!-- ── Día por día ──────────────────────────────────────────────────────── -->
+<h2 class="seccion">Día por día</h2>
+<div class="tarjeta">
+  <p class="mini" style="margin:0 0 12px">Tocá una columna para ver qué pasó ese día.</p>
+  <app-columnas-dia [fechas]="fechas()" [checkins]="checkins()" />
+</div>
+
+<!-- ── Tendencia ────────────────────────────────────────────────────────── -->
+<h2 class="seccion">El rol, semana a semana</h2>
+<div class="tarjeta">
+  @if (hayTendencia()) {
+    <p class="mini" style="margin:0 0 10px">
+      Porcentaje del tiempo en Venta y clientes + Estrategia. Debajo del 40%, la Ficha de Rol
+      dice que el rol de Director no se está ejerciendo.
+    </p>
+    <app-linea-tendencia [puntos]="tendencia()" [objetivo]="40" objetivoTexto="40% mínimo" [maximo]="100" />
+  } @else {
+    <div class="vacio">
+      <div class="titulo">Sin historial todavía</div>
+      <div class="chico">Con dos semanas cargadas ya se ve la tendencia.</div>
+    </div>
+  }
+</div>
+
+<!-- ── Fugas ────────────────────────────────────────────────────────────── -->
+<h2 class="seccion">Horas que no eran tuyas</h2>
+@if (fugas().length) {
+  <div class="tarjeta alerta">
+    <h3 style="margin:0 0 4px">{{ horasFuga() }} h en tareas con otro dueño</h3>
+    @for (f of fugas(); track f.dueno) {
+      <div class="entre">
+        <div class="fila sep">
+          <span class="fuerte">{{ f.nombre }}</span>
+          <span class="chico tabular nowrap">{{ f.horas }} h</span>
+        </div>
+        <div class="mini">{{ f.tareas.join(' · ') }}</div>
+      </div>
+    }
+    <a class="btn chico" routerLink="/delegar" style="margin-top:12px">Ver qué pasarle a cada uno</a>
+  </div>
+} @else {
+  <div class="tarjeta">
+    <p class="chico" style="margin:0">
+      @if (totales().total) {
+        Ninguna tarea de la tabla de delegación apareció esta semana.
+      } @else {
+        Sin registro: todavía no se puede saber.
+      }
+    </p>
+  </div>
+}

@@ -4,9 +4,13 @@ PWA de uso personal (un solo usuario) que aplica la **Ficha de Rol del 08/08/202
 automática: clasifica el tiempo, marca en rojo lo que no es tuyo, no deja entrar como prioridad
 propia nada que tenga otro dueño, y sigue la prueba de Luciana con su cuenta atrás.
 
-La lógica de negocio **está escrita en el código y versionada** (`js/rules.js`,
-`js/prueba-luciana.js`). No hay pantalla de "ajustes" donde haya que cargarla a mano, justamente
-porque si dependiera de eso no se iba a actualizar nunca.
+**Angular 22 + Firebase.** Los datos se sincronizan entre el celular y la compu, y siguen
+funcionando sin señal. Si todavía no configuraste Firebase, la app arranca igual en modo local:
+nunca queda inutilizable esperando que completes algo.
+
+La lógica de negocio **está escrita en el código y versionada** (`src/app/core/reglas.ts`,
+`src/app/core/prueba-luciana.ts`). No hay pantalla de ajustes donde haya que cargarla a mano,
+justamente porque si dependiera de eso no se iba a actualizar nunca.
 
 ---
 
@@ -14,183 +18,176 @@ porque si dependiera de eso no se iba a actualizar nunca.
 
 | Pantalla | Para qué |
 |---|---|
-| **Hoy** | Máximo 3 prioridades + el cierre de jornada de una sola pregunta ("¿qué te comió más horas hoy?"). Se puede dictar por voz. |
-| **Semana** | Los 4 umbrales con semáforo verde/amarillo/rojo y las horas que no eran tuyas. |
+| **Hoy** | Máximo 3 prioridades + el cierre de jornada de una sola pregunta. Se puede dictar por voz. |
+| **Semana** | Los 4 umbrales con semáforo y tres gráficos: reparto por categoría, forma del día a día y la tendencia del rol contra el piso del 40%. |
 | **Prueba** | Las 4 revisiones de viernes, el checklist de señales, la cuenta atrás al 05/09 y las 3 salidas. |
-| **Actas** | Reunión cerrada = qué se decidió / quién / para cuándo. Sin eso queda "sin acta" y visible. |
+| **Actas** | Reunión cerrada = qué se decidió / quién / para cuándo. Sin eso queda «sin acta» y visible. |
 | **Docs** | La carpeta de Drive indexada: preguntás y devuelve el párrafo exacto y de qué archivo salió. |
 | **⋯ → Para delegar** | Todo lo que hiciste vos y tenía otro dueño, agrupado por persona. |
+| **⋯ → Indicadores** | Los 3 números que te tocan, con su evolución mensual. |
 | **⋯ → Ficha de Rol** | Las 7 decisiones, la tabla de delegación y las 5 reglas, solo lectura. |
-| **⋯ → Indicadores** | Los 3 números que te tocan. Y solo esos. |
 
 Cosas que la app hace sola, sin que haya que configurarlas:
 
-- Si escribís "cargué pedidos" o "fui al banco", eso va **siempre** a Ejecución Operativa aunque la
-  agenda dijera otra cosa (regla de mapeo 3.3) y aparece en rojo con el nombre del dueño real.
+- Si escribís «cargué pedidos» o «fui al banco», eso va **siempre** a Ejecución Operativa aunque la
+  agenda dijera otra cosa (regla de mapeo 3.3) y aparece en rojo con el nombre del dueño real. Esa
+  categoría queda clavada: la app no te deja cambiarla a mano.
 - Si intentás poner como prioridad algo de la tabla de delegación, **no entra**: la única salida es
   pasárselo a quien corresponde.
-- Si un acta tiene dos nombres en "quién lo hace", la rechaza (si hay más de un responsable, nadie
+- Si un acta tiene dos nombres en «quién lo hace», la rechaza (si hay más de un responsable, nadie
   es responsable).
 - Si pasan dos días sin cierre de jornada, el aviso deja de ser genérico y lo dice explícitamente.
 - Si una revisión de la prueba de Luciana venció sin registrarse, lo marca en rojo: la regla del
   acuerdo dice que la prueba se cancela.
 
-Si un día no cargás nada, no se rompe ni queda en blanco: los umbrales quedan en gris ("sin
-registro") en vez de mentir con ceros.
+Si un día no cargás nada, no se rompe ni queda en blanco: los umbrales quedan en gris («sin
+registro») en vez de mentir con ceros.
+
+---
+
+## Los gráficos
+
+Están hechos con una paleta validada, no elegida a ojo: los ocho colores de categoría pasan el
+control de contraste y de daltonismo en modo claro y en modo oscuro (los tonos oscuros no son los
+claros invertidos, son otro juego validado contra el fondo oscuro).
+
+- **Orden fijo, nunca ordenado por valor.** La misma categoría está siempre en la misma fila, así
+  dos semanas se comparan de un vistazo. Las categorías en cero se muestran igual: que Estrategia
+  esté vacía es justamente el dato.
+- **Cada barra lleva su nombre y su número al lado.** El color acompaña, nunca es la única pista.
+- **Hay tabla.** El botón «Ver números» muestra los mismos datos en una tabla.
 
 ---
 
 ## Publicarla e instalarla en el celular
 
 1. **Activar Pages una vez, a mano**: *Settings → Pages → Build and deployment → Source:
-   **GitHub Actions***. El workflow intenta activarlo solo (`enablement: true`), pero GitHub no le
-   permite al token del workflow crear el sitio en este repositorio: falla con *"Create Pages site
-   failed: Resource not accessible by integration"* hasta que lo actives vos. Es un solo click y
-   queda hecho para siempre.
-2. Con Pages activado, volvé a *Actions → Deploy PWA a GitHub Pages* y usá *Re-run jobs* en la
-   última corrida (o hacé cualquier push). El workflow `.github/workflows/pages.yml` publica el repo entero en cada push a `main` o a una rama
-   `claude/**`. Como el repositorio todavía no tiene `main`, publica desde esta rama tal cual
-   está; cuando la mergees a `main`, sigue funcionando igual. También se puede disparar a mano desde
-   *Actions → Deploy PWA a GitHub Pages → Run workflow*.
+   **GitHub Actions***. El workflow intenta activarlo solo, pero GitHub no le permite al token del
+   workflow crear el sitio en este repositorio.
+2. Cada push a `main` o a una rama `claude/**` compila el proyecto, corre los tests y publica.
+   También se dispara a mano desde *Actions → Deploy PWA a GitHub Pages → Run workflow*.
 3. Queda en `https://emma-argenbras.github.io/AGENDA-Y-PLANIFICADOR-EMMA/`.
 4. En el celular: abrir esa URL en Chrome (Android) o Safari (iPhone) → *Agregar a pantalla de
    inicio*. Desde ahí abre a pantalla completa y funciona sin internet.
 
-Para probarla en la compu: `npx http-server -p 8080 -c-1` y abrir `http://localhost:8080`.
-
-Hay una prueba automática que abre la app en un navegador real y verifica las reglas que no se
-pueden romper sin darse cuenta (el bloqueo de la tabla de delegación, el mapeo forzado a Ejecución
-Operativa, el rechazo de actas con dos responsables, la revisión vencida de la prueba y el
-funcionamiento offline):
-
-```bash
-npx http-server -p 8099 -c-1     # en una terminal
-npm i -D playwright && node tools/e2e.mjs
-```
-
----
-
 ### Sobre la privacidad del repositorio
 
 El repositorio es **público**. Como la app es estática, las reglas de negocio (la tabla de
-delegación con los nombres del equipo, los umbrales y el detalle de la prueba de Luciana) se
-descargan al navegador y son legibles por cualquiera que tenga la dirección — eso pasa igual con el
-repo privado, porque el sitio publicado es público.
+delegación con los nombres del equipo y el detalle de la prueba) se descargan al navegador y son
+legibles por cualquiera que tenga la dirección — eso pasa igual con el repo privado, porque el
+sitio publicado es público.
 
-Lo que **nunca** sale del teléfono son tus datos: los cierres de jornada, las prioridades, las actas
-y las revisiones viven solo en el dispositivo.
+Lo que **nunca** es público son tus datos: viven en tu dispositivo y, si conectás Firebase, en tu
+proyecto, con reglas que atan cada documento a tu usuario (`firestore.rules`).
 
 Si preferís que el código no quede a la vista: *Settings → General → Danger Zone → Change
-visibility → Private*. Ojo que GitHub Pages desde un repositorio privado requiere plan Pro; la
-alternativa gratis es publicarlo en Cloudflare Pages o Netlify, que sí publican desde repos
-privados, y ahí además se le puede poner contraseña al sitio.
-
-## Conectar la carpeta de Drive (trámite de 5 minutos, una sola vez)
-
-La app lee la carpeta `1gar-fgb0GdUtS01KdNhDnfWtyJ1MBMkX` en **solo lectura**, con tu propia cuenta,
-directo desde el navegador. No hay servidor intermedio ni secreto guardado en ningún lado.
-
-1. [console.cloud.google.com](https://console.cloud.google.com) con `emmanuelclubdelmate@gmail.com` → crear un proyecto.
-2. *APIs y servicios → Biblioteca* → activar **Google Drive API**.
-3. *Pantalla de consentimiento OAuth* → Externo → agregarte como usuario de prueba.
-4. *Credenciales → Crear credenciales → ID de cliente de OAuth → Aplicación web*.
-5. En **Orígenes de JavaScript autorizados** poner `https://emma-argenbras.github.io`
-   (y `http://localhost:8080` si vas a probar en la compu).
-6. Copiar el Client ID y pegarlo en **Ajustes** de la app. Listo para siempre.
-
-Después, *Docs → Traer documentos de Drive*: baja el texto de los Google Docs, Sheets y Slides de la
-carpeta y los deja **indexados en el teléfono**, así la búsqueda anda offline y sin volver a pedir
-permiso. Los PDF e imágenes se listan pero no se leen (no hay lector de PDF adentro de la app).
+visibility → Private*. Ojo que Pages desde un repositorio privado requiere plan Pro; la alternativa
+gratis es Cloudflare Pages o Netlify, que publican desde repos privados.
 
 ---
 
-## Las decisiones técnicas del punto 7, con el trade-off de cada una
+## Conectar Firebase (una sola vez, ~10 minutos)
 
-Están tomadas, pero son reversibles. Esto es lo que se ganó y lo que se resignó.
+Sin esto la app funciona igual, pero los datos quedan solo en ese teléfono.
 
-### 1. PWA sin build step, alojada en GitHub Pages
+1. [console.firebase.google.com](https://console.firebase.google.com) → crear proyecto.
+2. **Firestore Database** → Crear base de datos → modo producción → región `southamerica-east1`.
+3. **Authentication** → Comenzar → habilitar **Google**.
+4. Authentication → Settings → **Authorized domains** → agregar `emma-argenbras.github.io`.
+5. Configuración del proyecto → Tus apps → **Web** → registrar la app y copiar el bloque
+   `firebaseConfig`.
+6. En la app: **Ajustes → pegar la configuración → Conectar proyecto → Entrar con Google**.
+7. Si ya venías usando la app en modo local: **Ajustes → Subir lo de este dispositivo**.
 
-**Elegido:** HTML + JavaScript de módulos nativos, sin React, sin bundler, sin `npm install`.
-Se sirve estático desde el mismo repo.
+Esos valores no son secretos (viajan en cualquier app web). Lo que protege los datos son las reglas:
 
-- **A favor:** se instala en el celular como una app, anda offline, costo cero, no hay nada que se
-  pudra (no hay 400 dependencias que actualizar), y cualquier cambio es *editar un archivo y pushear*.
-  Una app nativa habría necesitado cuenta de desarrollador, builds y revisiones de tienda para algo
-  que usa una sola persona.
-- **En contra:** en iPhone las notificaciones exigen tenerla agregada a la pantalla de inicio, y no
-  hay integración profunda con el sistema (widgets, Siri). Si algún día querés widgets nativos, esto
-  hay que rehacerlo.
+```bash
+npm i -g firebase-tools && firebase login
+firebase deploy --only firestore:rules      # publica firestore.rules
+```
 
-### 2. Todo vive en el dispositivo (IndexedDB), sin servidor ni base de datos
+También se puede dejar la configuración fija en `src/environments/environment.ts` para no pegarla
+en cada dispositivo.
 
-- **A favor:** cero costo fijo, cero mantenimiento, cero superficie de ataque: los datos del negocio
-  no viajan a ningún lado. Arranca instantáneo y funciona sin señal.
-- **En contra:** los datos están en *ese* teléfono. Si lo cambiás, hay que **Ajustes → Exportar
-  backup** e importar en el nuevo. No hay sincronización entre teléfono y compu.
-- **Si molesta:** el paso natural es guardar el backup automático en un archivo de la misma carpeta
-  de Drive. Requiere subir el scope de Drive de `readonly` a `drive.file`.
+### Push con la app cerrada (opcional)
 
-### 3. OAuth de Google desde el navegador, no sincronización manual
+Los avisos dentro de la app y las notificaciones locales funcionan sin nada de esto. Para que el
+recordatorio llegue **con la app cerrada** hay que desplegar las tareas programadas:
 
-- **A favor:** un solo trámite y después la app trae sola lo que cambió en Drive. Solo pide permiso
-  de **lectura**; el token dura una hora y no se guarda ningún refresh token ni client secret.
-- **En contra:** hay que crear el Client ID una vez a mano (paso de arriba), y cada tanto Google
-  vuelve a pedir el permiso. Sin backend no hay forma de evitar eso.
-- **Alternativa descartada:** exportar los documentos a mano y pegarlos en la app — más simple de
-  programar, pero depende de que alguien lo haga todas las semanas. Ya sabemos cómo termina eso.
+```bash
+cd functions && npm install && cd ..
+firebase deploy --only functions
+```
 
-### 4. Búsqueda de texto local, no embeddings/RAG
-
-**Elegido:** el texto completo de los documentos se guarda en el teléfono y la búsqueda es por
-palabras, con puntaje por párrafo. Devuelve **el párrafo textual** y el archivo de donde salió.
-
-- **A favor:** son pocos archivos y son documentos de reglas, no una biblioteca: buscar "margen
-  mínimo" encuentra lo que hay que encontrar. Anda offline, gratis, instantáneo, y **no inventa
-  nada** — leés lo que dice el documento, no una paráfrasis.
-- **En contra:** no responde preguntas conceptuales que exijan cruzar tres documentos y redactar una
-  conclusión ("¿es coherente el esquema de comisiones con el margen mínimo?"). Para eso hace falta
-  un modelo, y un modelo en el navegador significa poner una API key en el teléfono y pagar por uso.
-- **Si hace falta:** el enganche está aislado en `js/drive.js` (`buscar()`), que ya devuelve los
-  pasajes rankeados listos para mandárselos a un modelo. Es un cambio contenido, no una reescritura.
-
-### 5. Notificaciones locales, no push server (etapa 2)
-
-- **Hoy:** aviso a la mañana con las 3 prioridades y a la noche pidiendo el cierre; con la PWA
-  instalada en Android también se disparan con la app cerrada (Periodic Background Sync). El aviso
-  que **nunca** falla es el banner al abrir la app, que dice cuántos días seguidos van sin registro.
-- **Límite honesto:** sin un servidor propio no hay push garantizado con la app cerrada, y en iPhone
-  eso es más restrictivo todavía. Un push de verdad necesita un backend mínimo con claves VAPID.
+Son tres: las 3 prioridades a la mañana, el cierre a la noche (con el mensaje que cambia a los dos
+días sin registro) y el checklist de la revisión de Luciana los viernes. Requiere plan **Blaze**
+(tarjeta cargada); con un usuario y tres disparos por día el costo real es prácticamente cero.
+Después, en **Ajustes → Registrar** este dispositivo para push, y cargar la `vapidKey` de
+*Firebase → Cloud Messaging → Web Push certificates* en la configuración.
 
 ---
 
-## Estructura
+## Conectar la carpeta de Drive (opcional)
+
+La app lee la carpeta `1gar-fgb0GdUtS01KdNhDnfWtyJ1MBMkX` en **solo lectura**, con tu cuenta,
+directo desde el navegador.
+
+1. [console.cloud.google.com](https://console.cloud.google.com) → el mismo proyecto de Firebase.
+2. APIs y servicios → Biblioteca → activar **Google Drive API**.
+3. Pantalla de consentimiento OAuth → Externo → agregarte como usuario de prueba.
+4. Credenciales → Crear credenciales → ID de cliente OAuth → Aplicación web.
+5. En **Orígenes de JavaScript autorizados**: `https://emma-argenbras.github.io`
+   (y `http://localhost:4200` para probar local).
+6. Pegar el Client ID en **Ajustes**.
+
+Después, *Docs → Traer documentos*: baja el texto de los Google Docs, Sheets y Slides y los deja
+indexados en el teléfono, así la búsqueda anda offline. Los PDF e imágenes se listan pero no se
+leen. Devuelve el párrafo textual del documento, no una interpretación.
+
+---
+
+## Desarrollo
+
+```bash
+npm install
+npm start                      # http://localhost:4200
+npm test                       # 19 tests de las reglas de negocio (vitest)
+npm run build                  # build de producción
+npm run servir:dist            # sirve el build en :8099
+npm i -D playwright && npm run test:e2e   # 21 verificaciones en un navegador real
+npm run iconos                 # regenera los íconos PNG (sin dependencias)
+```
+
+Requiere Node 24 (lo pide Angular 22).
+
+### Estructura
 
 ```
-index.html              Shell y navegación
-css/app.css             Estilos (mobile-first, oscuro y claro)
-sw.js                   Service worker: offline + recordatorios
-manifest.webmanifest    Instalación como app
-js/rules.js             ★ Secciones 3.1 a 3.7: decisiones propias, tabla de delegación,
-                          8 categorías, 4 umbrales, 5 reglas, 3 indicadores
-js/prueba-luciana.js    ★ Sección 4: prueba, revisiones, señales, salidas
-js/classify.js          Motor: texto libre → categoría + dueño real (aplica 3.2 y 3.3)
-js/store.js             IndexedDB, fechas, backup
-js/drive.js             Drive solo lectura + índice y búsqueda local
-js/notify.js            Recordatorios
-js/ui.js                Helpers de DOM
-js/views/*.js           Una pantalla por archivo
-tools/make-icons.py     Genera los íconos PNG (sin dependencias)
+src/app/core/reglas.ts          ★ Secciones 3.1 a 3.7: decisiones propias, tabla de delegación,
+                                  8 categorías, 4 umbrales, 5 reglas, 3 indicadores
+src/app/core/prueba-luciana.ts  ★ Sección 4: prueba, revisiones, señales, salidas
+src/app/core/clasificador.ts    Motor: texto libre → categoría + dueño real
+src/app/core/fechas.ts          Fechas en hora local
+src/app/data/                   Firestore, sesión de Google, repositorio local, Drive, avisos
+src/app/ui/graficos/            Los tres gráficos
+src/app/vistas/                 Una pantalla por carpeta
+functions/                      Tareas programadas de push
+firestore.rules                 Cada documento atado a tu usuario
+tools/e2e.mjs                   Prueba de punta a punta
+tools/make-icons.py             Genera los íconos PNG
 ```
 
 ★ = las reglas del negocio. Para cambiar un umbral, un dueño o una categoría se edita ese archivo y
 se commitea. Eso es a propósito: obliga a que quede registro de cuándo cambió la regla y por qué.
 
----
+### Decisiones técnicas
 
-## Qué falta (etapa 2, según el orden del brief)
-
-- Push real con servidor de notificaciones (VAPID) para que los avisos lleguen con la app cerrada en
-  cualquier teléfono.
-- Backup automático a Drive.
-- Lectura de PDFs.
-- Respuestas redactadas sobre los documentos (hoy devuelve los pasajes exactos).
+- **Angular 22** (lo último; 21 pasó a LTS), zoneless, componentes standalone y señales.
+- **SDK de Firebase directa, sin `@angular/fire`**: ese paquete todavía pide Angular 20, así que
+  usarlo obligaba a quedarse dos versiones atrás. La SDK modular se integra bien con señales.
+- **Firestore con caché offline** (`persistentLocalCache`), y un repositorio local con IndexedDB
+  detrás de la misma interfaz: por eso la app funciona idéntico con nube y sin nube.
+- **Rutas con `#`**: GitHub Pages sirve estáticos y así un enlace profundo recargado nunca da 404.
+- **Búsqueda de documentos local, no RAG**: son pocos archivos y son documentos de reglas. Devuelve
+  el párrafo textual, sin inventar. El enganche para mandarle esos pasajes a un modelo está aislado
+  en `Drive.buscar()`.

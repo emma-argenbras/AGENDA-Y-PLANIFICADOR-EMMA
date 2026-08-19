@@ -1,0 +1,21 @@
+.tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 4px; }
+.tiles .tarjeta { margin: 0; }
+.tile .de { font-size: 17px; color: var(--tinta-3); font-weight: 500; }
+
+.senales { margin-top: 8px; }
+.senales li { border-top: 0; padding: 3px 0; }
+.luz {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--bien); margin-right: 6px;
+}
+.luz.mal { background: var(--critico); }
+
+.senal {
+  border: 1px solid var(--borde);
+  border-radius: var(--r-chico);
+  padding: 12px;
+  margin-bottom: 10px;
+  background: var(--superficie-2);
+}
+.senal.destacada { border-color: var(--critico); background: var(--critico-fondo); }
+.senal .chips, .senal input { margin-top: 9px; }

@@ -1,0 +1,212 @@
+<p class="chico" style="margin:0 0 14px">{{ fechaLarga }}</p>
+
+@if (racha() >= 2) {
+  <div class="tarjeta alerta">
+    <h2>{{ racha() }} días hábiles sin cierre de jornada</h2>
+    <p class="chico" style="margin:0">
+      No es un recordatorio genérico: van {{ racha() }} días seguidos sin registrar nada.
+      El problema que esta app tiene que resolver es exactamente este.
+    </p>
+  </div>
+} @else if (racha() === 1) {
+  <div class="tarjeta">
+    <p class="chico" style="margin:0">Ayer no hubo cierre. Podés cargarlo desde «Últimos días».</p>
+  </div>
+}
+
+@if (hayRevisionHoy) {
+  <div class="tarjeta">
+    <div class="fila sep">
+      <div class="crece">
+        <h2 style="margin:0">Hoy toca revisión de Luciana</h2>
+        <p class="mini" style="margin:2px 0 0">15 minutos. Si las revisiones no se hacen, la prueba se cancela.</p>
+      </div>
+      <a class="btn primario chico" routerLink="/prueba">Registrar</a>
+    </div>
+  </div>
+}
+
+<!-- ── Prioridades ──────────────────────────────────────────────────────── -->
+<h2 class="seccion">Prioridades de hoy ({{ prioridades().length }}/3)</h2>
+
+@if (!prioridades().length && !cargando()) {
+  <div class="tarjeta">
+    <div class="vacio">
+      <div class="titulo">Sin prioridades cargadas</div>
+      <div class="chico">Tres como máximo. Lo que tenga otro dueño no va a entrar.</div>
+    </div>
+  </div>
+}
+
+@for (p of prioridades(); track p.id) {
+  <div class="tarjeta prioridad">
+    <button class="marca" type="button" (click)="alternar(p)"
+            [attr.aria-label]="p.hecha ? 'Marcar como pendiente' : 'Marcar como hecha'"
+            [attr.aria-pressed]="p.hecha">
+      @if (p.hecha) {
+        <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+          <path d="M4 10.5 8 14.5 16 6" fill="none" stroke="currentColor" stroke-width="2.4"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      }
+    </button>
+    <div class="crece">
+      <div [class.tachado]="p.hecha">{{ p.texto }}</div>
+      @if (p.categoria) { <div class="mini">{{ nombreCategoria(p.categoria) }}</div> }
+    </div>
+    <button class="btn chico fantasma" type="button" (click)="quitar(p)" aria-label="Quitar">✕</button>
+  </div>
+}
+
+<div class="fila" style="margin-top:4px">
+  <input class="crece" type="text" placeholder="Agregar prioridad…" enterkeyhint="done"
+         [value]="nueva()" (input)="nueva.set($any($event.target).value)"
+         (keydown.enter)="agregar()" aria-label="Nueva prioridad">
+  <button class="btn primario" type="button" (click)="agregar()" aria-label="Agregar">+</button>
+</div>
+
+<!-- ── Cierre de jornada ────────────────────────────────────────────────── -->
+<h2 class="seccion">Cierre de jornada</h2>
+
+@if (checkin(); as ck) {
+  <div class="tarjeta">
+    <p class="chico" style="margin:0 0 6px">Registrado. Esto es lo que quedó:</p>
+    @for (s of ck.segmentos; track $index) {
+      <div class="entre fila sep">
+        <div class="crece">
+          <div class="fila" style="gap:7px">
+            <i class="punto" [style.background]="color(s)"></i>
+            <span>{{ s.texto }}</span>
+          </div>
+          <div class="mini" style="margin-left:15px">
+            {{ nombreCategoria(s.categoria) || 'Sin categoría' }}
+            @if (s.delegacion) { · era de {{ s.delegacion.duenoNombre }} }
+          </div>
+        </div>
+        <span class="chico tabular nowrap">{{ s.horas }} h</span>
+      </div>
+    }
+    <div class="fila sep" style="margin-top:12px">
+      <span class="mini">Total del día: {{ totalHoy() }} h</span>
+      <span class="btn-fila">
+        <button class="btn chico" type="button" (click)="reabrir()">Ajustar</button>
+        <button class="btn chico fantasma" type="button" (click)="borrarCierre()">Borrar</button>
+      </span>
+    </div>
+  </div>
+} @else {
+  <div class="tarjeta">
+    <p class="chico" style="margin:0 0 10px">
+      Una sola pregunta. Se registra lo que pasó, no lo que estaba planificado.
+    </p>
+    <textarea placeholder="¿Qué te comió más horas hoy?" enterkeyhint="done"
+              [value]="texto()" (input)="texto.set($any($event.target).value)"
+              aria-label="Qué te comió más horas hoy"></textarea>
+    <div class="btn-fila" style="margin-top:10px">
+      <button class="btn primario crece" type="button" (click)="abrirEditor()">Guardar</button>
+      @if (puedeDictar) {
+        <button class="btn" type="button" (click)="dictar()">
+          {{ dictando() ? '■ Parar' : '🎤 Dictar' }}
+        </button>
+      }
+    </div>
+  </div>
+}
+
+<!-- ── Últimos días ─────────────────────────────────────────────────────── -->
+<h2 class="seccion">Últimos días</h2>
+<div class="tarjeta">
+  <ul class="limpia">
+    @for (d of ultimos(); track d.fecha) {
+      <li class="fila sep">
+        <div class="crece">
+          <div>{{ d.etiqueta }}</div>
+          <div class="mini">{{ d.resumen }}</div>
+        </div>
+        @if (d.hay) {
+          <span class="chico tabular nowrap">{{ d.horas }} h</span>
+        } @else if (!d.finde) {
+          <button class="btn chico" type="button" (click)="diaPasado.set(d.fecha)">Cargar</button>
+        }
+      </li>
+    }
+  </ul>
+</div>
+
+<!-- ── Bloqueo por tabla de delegación ──────────────────────────────────── -->
+<app-dialogo [abierto]="!!bloqueo()" titulo="NO ES TUYA" (cerrar)="bloqueo.set(null)">
+  @if (bloqueo(); as b) {
+    <p class="fuerte">{{ b.texto }}</p>
+    <p><span class="pastilla no-tuya">Dueño: {{ b.delegacion.duenoNombre }}</span></p>
+    <p class="chico">Tabla de delegación: «{{ b.delegacion.tarea }}» → {{ b.delegacion.duenoNombre }}.</p>
+    @if (b.delegacion.excepcion) { <p class="chico">{{ b.delegacion.excepcion }}</p> }
+    <p class="mini">
+      Test de la hora: si lo puede hacer alguien que cobra menos que vos, no es tuyo.
+      Sin excepción de «es más rápido si lo hago yo».
+    </p>
+  }
+  <button pie class="btn primario" type="button" (click)="derivarBloqueada()">
+    Pasárselo a {{ primerNombre(bloqueo()?.delegacion?.duenoNombre ?? '') }}
+  </button>
+  <button pie class="btn" type="button" (click)="bloqueo.set(null)">Reescribir</button>
+</app-dialogo>
+
+<!-- ── Editor de segmentos ──────────────────────────────────────────────── -->
+<app-dialogo [abierto]="!!editor()" titulo="Así lo registro" (cerrar)="editor.set(null)">
+  @if (editor(); as e) {
+    @for (s of e.segmentos; track $index) {
+      <div class="segmento" [class.no-tuya]="!!s.delegacion">
+        <div class="fuerte" style="margin-bottom:8px">{{ s.texto }}</div>
+
+        @if (s.delegacion) {
+          <p style="margin:0 0 6px"><span class="pastilla no-tuya">NO ES TUYA → {{ s.delegacion.duenoNombre }}</span></p>
+          <p class="mini" style="margin:0 0 8px">
+            «{{ s.delegacion.tarea }}» tiene un solo dueño y no sos vos.
+            @if (s.delegacion.excepcion) { {{ s.delegacion.excepcion }} }
+          </p>
+        }
+        @if (s.decisionPropia) {
+          <p style="margin:0 0 8px">
+            <span class="pastilla propia">DECISIÓN TUYA</span>
+            <span class="mini"> {{ s.decisionPropia.texto }}</span>
+          </p>
+        }
+
+        @if (s.forzada) {
+          <p class="mini" style="margin:0 0 8px">
+            Categoría: {{ nombreCategoria(s.categoria) }}. Fijada por la regla de mapeo:
+            esto va siempre a Ejecución Operativa, aunque la agenda dijera otra cosa.
+          </p>
+        } @else {
+          @if (!s.categoria) { <p class="mini" style="margin:0 0 6px">No pude clasificarlo. Elegí una:</p> }
+          <div class="chips">
+            @for (c of categorias; track c.id) {
+              <button class="chip" type="button" [class.activo]="s.categoria === c.id"
+                      (click)="elegirCategoria(s, c.id)">{{ c.nombre }}</button>
+            }
+          </div>
+        }
+
+        <div class="horas">
+          <button type="button" (click)="ajustarHoras(s, -0.5)" aria-label="Menos media hora">−</button>
+          <span class="val tabular">{{ s.horas }} h</span>
+          <button type="button" (click)="ajustarHoras(s, 0.5)" aria-label="Más media hora">+</button>
+        </div>
+      </div>
+    }
+    <p class="chico">Total del día: {{ totalEditor() }} h</p>
+  }
+  <button pie class="btn primario" type="button" (click)="confirmar()">Confirmar</button>
+  <button pie class="btn" type="button" (click)="editor.set(null)">Cancelar</button>
+</app-dialogo>
+
+<!-- ── Cargar un día pasado ─────────────────────────────────────────────── -->
+<app-dialogo [abierto]="!!diaPasado()" titulo="Cargar un día anterior"
+             bajada="Mejor tarde que nunca: sirve igual para la semana."
+             (cerrar)="diaPasado.set(null)">
+  <textarea placeholder="¿Qué te comió más horas ese día?"
+            [value]="textoPasado()" (input)="textoPasado.set($any($event.target).value)"
+            aria-label="Qué pasó ese día"></textarea>
+  <button pie class="btn primario" type="button" (click)="guardarDiaPasado()">Seguir</button>
+  <button pie class="btn" type="button" (click)="diaPasado.set(null)">Cancelar</button>
+</app-dialogo>

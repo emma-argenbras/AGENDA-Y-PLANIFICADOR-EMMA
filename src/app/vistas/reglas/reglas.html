@@ -1,0 +1,76 @@
+<p class="chico" style="margin:0 0 14px">Fijada en código, no en ajustes.</p>
+
+<div class="tarjeta">
+  <h2>{{ perfil.nombre }}</h2>
+  <p class="chico" style="margin:0">{{ perfil.roles.join(' · ') }}</p>
+  <p class="mini" style="margin:2px 0 0">{{ perfil.base }}</p>
+</div>
+
+<h2 class="seccion">Las 7 decisiones que son tuyas</h2>
+<div class="tarjeta">
+  <ol class="num">@for (d of decisiones; track d.id) { <li>{{ d.texto }}</li> }</ol>
+</div>
+
+<h2 class="seccion">Tabla de delegación</h2>
+<div class="tarjeta">
+  @for (t of tabla; track t.tarea) {
+    <div class="fila sep entre">
+      <div class="crece">
+        <div>{{ t.tarea }}</div>
+        @if (t.excepcion) { <div class="mini">{{ t.excepcion }}</div> }
+        @if (t.forzada) { <div class="mini">Siempre cuenta como Ejecución Operativa.</div> }
+      </div>
+      <span class="chico nowrap">{{ t.dueno }}</span>
+    </div>
+  }
+</div>
+
+<h2 class="seccion">Las 8 categorías de tiempo</h2>
+<div class="tarjeta">
+  @for (c of categorias; track c.id) {
+    <div class="entre">
+      <div class="fila" style="gap:8px">
+        <i style="width:10px;height:10px;border-radius:2px;flex:0 0 auto" [style.background]="c.color"></i>
+        <span class="fuerte">{{ c.n }}. {{ c.nombre }}</span>
+      </div>
+      <div class="mini" style="margin-left:18px">{{ c.definicion }}</div>
+    </div>
+  }
+</div>
+
+<h2 class="seccion">Umbrales de control</h2>
+<div class="tarjeta">
+  @for (u of umbrales; track u.id) {
+    <div class="entre"><span class="fuerte">{{ u.titulo }}</span><div class="mini">{{ u.regla }}</div></div>
+  }
+</div>
+
+<h2 class="seccion">Las 5 reglas que blindan el sistema</h2>
+<div class="tarjeta">
+  @for (r of reglas; track r.id; let i = $index) {
+    <div class="entre"><span class="fuerte">{{ i + 1 }}. {{ r.titulo }}</span><div class="mini">{{ r.texto }}</div></div>
+  }
+</div>
+
+<h2 class="seccion">Los 3 indicadores</h2>
+<div class="tarjeta">
+  <ol class="num">
+    @for (i of indicadores; track i.id) { <li>{{ i.titulo }}<div class="mini">{{ i.aclaracion }}</div></li> }
+  </ol>
+</div>
+
+<h2 class="seccion">Quién hace qué</h2>
+<div class="tarjeta">
+  <ul class="limpia">
+    @for (p of equipo; track p.nombre) { <li><div>{{ p.nombre }}</div><div class="mini">{{ p.rol }}</div></li> }
+  </ul>
+</div>
+
+@if (vacantes.length) {
+  <h2 class="seccion">Vacantes abiertas</h2>
+  <div class="tarjeta alerta">
+    @for (v of vacantes; track v.puesto) {
+      <div><span class="fuerte">{{ v.puesto }}</span><div class="mini">{{ v.nota }}</div></div>
+    }
+  </div>
+}

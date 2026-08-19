@@ -1,0 +1,16 @@
+.marca {
+  width: 26px; height: 26px; flex: 0 0 auto;
+  border-radius: 50%;
+  border: 1.8px solid var(--eje);
+  background: none;
+  cursor: pointer;
+}
+.vencido { color: var(--critico); font-weight: 700; }
+.decision {
+  border: 1px solid var(--borde);
+  border-radius: var(--r-chico);
+  padding: 12px 12px 4px;
+  margin-bottom: 12px;
+  background: var(--superficie-2);
+}
+.error { color: var(--critico); font-size: 13.5px; margin: 12px 0 0; }

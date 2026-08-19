@@ -1,0 +1,149 @@
+<p class="chico" style="margin:0 0 14px">
+  {{ fechaCorta(P.inicio) }} al {{ fechaCorta(P.fin) }} · decisión {{ fechaCorta(P.decision) }} en {{ P.decisionDonde }}
+</p>
+
+<div class="tiles">
+  <div class="tarjeta tile">
+    <div class="rotulo">Decisión en Directorio</div>
+    <div class="cifra-chica">
+      @if (estado().diasParaDecision > 0) { Faltan {{ estado().diasParaDecision }} días }
+      @else if (estado().diasParaDecision === 0) { Es hoy }
+      @else { Pasaron {{ -estado().diasParaDecision }} días }
+    </div>
+  </div>
+  <div class="tarjeta tile">
+    <div class="rotulo">Mejoras propuestas</div>
+    <div class="cifra tabular">{{ estado().mejoras }}<span class="de">/{{ estado().objetivoMejoras }}</span></div>
+  </div>
+</div>
+
+@if (estado().riesgo; as r) {
+  <div class="tarjeta alerta">
+    <h2>Prueba en riesgo</h2>
+    <p style="margin:0 0 6px">{{ r.texto }}</p>
+    <p class="mini" style="margin:0">{{ P.reglaCancelacion }}</p>
+  </div>
+}
+
+@if (cierre(); as c) {
+  <div class="tarjeta">
+    <h2>Decidido: salida {{ c.salida }}</h2>
+    <p class="chico" style="margin:0">{{ c.titulo }}@if (c.nota) { — {{ c.nota }} }</p>
+  </div>
+}
+
+<h2 class="seccion">Revisiones de 15 minutos (viernes)</h2>
+@for (r of estado().revisiones; track r.fecha) {
+  <div class="tarjeta" [class.alerta]="r.estado === 'vencida'">
+    <div class="fila sep">
+      <div class="crece">
+        <span class="fuerte">{{ fechaLarga(r.fecha) }}</span>
+        <div class="mini">{{ ETIQUETAS[r.estado] }}</div>
+      </div>
+      <button class="btn chico" [class.primario]="r.estado !== 'hecha'" type="button" (click)="abrir(r.fecha)">
+        {{ r.estado === 'hecha' ? 'Ver / editar' : 'Registrar' }}
+      </button>
+    </div>
+    @if (r.datos; as d) {
+      <ul class="limpia senales">
+        @for (s of senalesConDato(d); track s.id) {
+          <li>
+            <span class="mini">
+              <i class="luz" [class.mal]="bien(s, d) === false"></i>
+              {{ s.pregunta }}: <span class="fuerte">{{ textoValor(s, d) }}</span>
+            </span>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+}
+
+<h2 class="seccion">El encargo</h2>
+<div class="tarjeta">
+  <h3>Hace</h3>
+  <ul class="limpia">@for (x of P.encargo; track x) { <li>{{ x }}</li> }</ul>
+  <h3 style="margin-top:14px">No hace</h3>
+  <ul class="limpia">@for (x of P.noHace; track x) { <li class="chico">{{ x }}</li> }</ul>
+</div>
+
+<h2 class="seccion">Las 3 salidas del {{ fechaCorta(P.decision) }}</h2>
+@for (s of P.salidas; track s.id) {
+  <div class="tarjeta" [style.border-color]="cierre()?.salida === s.id ? 'var(--bien)' : null">
+    <div class="fila sep">
+      <div class="crece">
+        <span class="fuerte">{{ s.id }}. {{ s.titulo }}</span>
+        <div class="mini">{{ s.detalle }}</div>
+      </div>
+      <button class="btn chico" [class.primario]="cierre()?.salida === s.id" type="button"
+              (click)="eligiendo.set(s)">
+        {{ cierre()?.salida === s.id ? 'Elegida' : 'Elegir' }}
+      </button>
+    </div>
+  </div>
+}
+
+<h2 class="seccion">Pendiente sin resolver</h2>
+@for (p of P.pendientes; track p.id) {
+  <div class="tarjeta">
+    <p style="margin:0 0 4px">{{ p.texto }}</p>
+    <p class="mini" style="margin:0 0 10px">Recomendado: {{ p.recomendado }}. {{ p.nota }}</p>
+    <div class="btn-fila">
+      @for (v of ['Sí', 'No']; track v) {
+        <button class="btn chico" [class.primario]="respuesta(p.id) === v" type="button"
+                (click)="responder(p.id, v)">{{ v }}</button>
+      }
+    </div>
+  </div>
+}
+
+<!-- ── Registrar revisión ───────────────────────────────────────────────── -->
+<app-dialogo [abierto]="!!editando()" [titulo]="'Revisión ' + (editando() ? fechaCorta(editando()!) : '')"
+             bajada="15 minutos. Las señales son estas y no otras." (cerrar)="editando.set(null)">
+  @for (s of P.senales; track s.id) {
+    <div class="senal" [class.destacada]="!!s.destacada">
+      <div>{{ s.pregunta }}</div>
+      @if (s.ayuda) { <div class="mini">{{ s.ayuda }}</div> }
+
+      @switch (s.tipo) {
+        @case ('bool') {
+          <div class="chips">
+            <button class="chip" type="button" [class.activo]="valor(s.id) === true" (click)="fijar(s.id, true)">Sí</button>
+            <button class="chip" type="button" [class.activo]="valor(s.id) === false" (click)="fijar(s.id, false)">No</button>
+          </div>
+        }
+        @case ('opcion') {
+          <div class="chips">
+            @for (op of s.opciones ?? []; track op) {
+              <button class="chip" type="button" [class.activo]="valor(s.id) === op" (click)="fijar(s.id, op)">{{ op }}</button>
+            }
+          </div>
+        }
+        @default {
+          <input type="number" inputmode="numeric" min="0" [value]="$any(valor(s.id)) ?? ''"
+                 (input)="fijar(s.id, $any($event.target).valueAsNumber)" [attr.aria-label]="s.pregunta">
+        }
+      }
+    </div>
+  }
+  <label class="campo">
+    <span>Notas (opcional)</span>
+    <textarea [value]="$any(valor('notas')) ?? ''" (input)="fijar('notas', $any($event.target).value)"></textarea>
+  </label>
+  <button pie class="btn primario" type="button" (click)="guardar()">Guardar</button>
+  <button pie class="btn" type="button" (click)="editando.set(null)">Cancelar</button>
+</app-dialogo>
+
+<!-- ── Elegir salida ────────────────────────────────────────────────────── -->
+<app-dialogo [abierto]="!!eligiendo()"
+             [titulo]="eligiendo() ? 'Salida ' + eligiendo()!.id + ': ' + eligiendo()!.titulo : ''"
+             (cerrar)="eligiendo.set(null)">
+  @if (eligiendo(); as s) {
+    <p class="chico">{{ s.detalle }}</p>
+    <p class="mini">Es una decisión tuya: incorporación y desvinculación de gente clave (decisión 5).</p>
+    <textarea placeholder="Por qué (una línea alcanza)" [value]="nota()"
+              (input)="nota.set($any($event.target).value)"></textarea>
+  }
+  <button pie class="btn primario" type="button" (click)="confirmarSalida()">Confirmar decisión</button>
+  <button pie class="btn" type="button" (click)="eligiendo.set(null)">Cancelar</button>
+</app-dialogo>

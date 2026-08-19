@@ -1,0 +1,55 @@
+@if (!todas().length) {
+  <div class="tarjeta">
+    <div class="vacio">
+      <div class="titulo">Todavía no hay nada acá</div>
+      <div class="chico">
+        Cuando cargues algo que está en la tabla de delegación —en el cierre del día o como
+        prioridad— aparece acá con el nombre del dueño.
+      </div>
+    </div>
+  </div>
+}
+
+@for (g of grupos(); track g.nombre) {
+  <div class="tarjeta alerta">
+    <div class="fila sep">
+      <h2 style="margin:0">{{ g.nombre }}</h2>
+      @if (g.horas) { <span class="chico tabular nowrap">{{ g.horas }} h tuyas</span> }
+    </div>
+    @if (g.rol) { <p class="mini" style="margin:2px 0 0">{{ g.rol }}</p> }
+    @for (d of g.items; track d.id) {
+      <div class="fila entre">
+        <div class="crece">
+          <div>{{ d.texto }}</div>
+          <div class="mini">{{ d.tarea }} · {{ fechaCorta(d.fecha) }}</div>
+        </div>
+        <button class="btn chico" type="button" (click)="avisado(d)">Avisado</button>
+      </div>
+    }
+  </div>
+}
+
+<h2 class="seccion">Tabla de delegación (fija)</h2>
+<div class="tarjeta">
+  @for (t of tabla; track t.tarea) {
+    <div class="fila sep entre">
+      <div class="crece">
+        <div>{{ t.tarea }}</div>
+        @if (t.excepcion) { <div class="mini">{{ t.excepcion }}</div> }
+      </div>
+      <span class="chico nowrap">{{ t.dueno }}</span>
+    </div>
+  }
+</div>
+
+@if (avisadas().length) {
+  <h2 class="seccion">Ya avisadas ({{ avisadas().length }})</h2>
+  <div class="tarjeta">
+    <ul class="limpia">
+      @for (d of avisadas().slice(0, 25); track d.id) {
+        <li class="chico">{{ d.texto }} → {{ d.duenoNombre }} · {{ fechaCorta(d.fecha) }}</li>
+      }
+    </ul>
+  </div>
+  <button class="btn chico fantasma" type="button" (click)="limpiar()">Limpiar avisadas</button>
+}

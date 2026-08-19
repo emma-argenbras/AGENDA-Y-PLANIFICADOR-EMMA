@@ -1,0 +1,35 @@
+.prioridad { display: flex; align-items: center; gap: 12px; }
+
+.marca {
+  width: 30px; height: 30px; flex: 0 0 auto;
+  border-radius: 50%;
+  border: 1.8px solid var(--eje);
+  background: none;
+  color: var(--acento);
+  display: grid; place-items: center;
+  cursor: pointer;
+}
+
+.punto { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+
+.segmento {
+  border: 1px solid var(--borde);
+  border-radius: var(--r-chico);
+  padding: 12px;
+  margin-bottom: 12px;
+  background: var(--superficie-2);
+}
+.segmento.no-tuya { border-color: var(--critico); background: var(--critico-fondo); }
+
+.horas { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.horas button {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  color: var(--tinta);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.horas .val { min-width: 64px; text-align: center; font-weight: 650; }

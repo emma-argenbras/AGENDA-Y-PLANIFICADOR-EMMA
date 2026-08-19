@@ -2,7 +2,7 @@ name: Deploy PWA a GitHub Pages
 
 on:
   push:
-    branches: [main, 'claude/**']   # el repo todavía no tiene main: publica también desde esta rama
+    branches: [main, 'claude/**']
   workflow_dispatch:
 
 permissions:
@@ -15,20 +15,34 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  construir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test -- --watch=false
+      # base-href: el sitio no vive en la raíz del dominio sino en /<repo>/
+      - run: npm run build -- --base-href "/${GITHUB_REPOSITORY#*/}/"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/agenda/browser
+
+  publicar:
+    needs: construir
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
         with:
-          # Intenta habilitar Pages solo. En este repo el token del workflow no tiene permiso
-          # para crearlo, así que hay que activarlo una vez en Settings → Pages → GitHub Actions.
+          # Intenta habilitar Pages solo. En este repo el token del workflow no
+          # tiene permiso para crearlo, así que se activa una vez a mano en
+          # Settings → Pages → Source: GitHub Actions.
           enablement: true
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: '.'
       - id: deployment
         uses: actions/deploy-pages@v4

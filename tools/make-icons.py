@@ -8,11 +8,11 @@ Uso: python3 tools/make-icons.py
 """
 import struct, zlib, os
 
-FONDO   = (23, 26, 35)
-PLACA   = (17, 19, 26)
-VERDE   = (158, 206, 106)
-ACENTO  = (125, 207, 255)
-ROJO    = (247, 118, 142)
+FONDO   = (26, 26, 25)
+PLACA   = (13, 13, 13)
+VERDE   = (12, 163, 12)
+ACENTO  = (57, 135, 229)
+ROJO    = (208, 59, 59)
 
 def png(path, w, h, px):
     def chunk(tipo, datos):
@@ -60,9 +60,11 @@ def icono(size, maskable=False):
         y += alto + hueco
     return px
 
-raiz = os.path.join(os.path.dirname(__file__), '..', 'icons')
+raiz = os.path.join(os.path.dirname(__file__), '..', 'public', 'icons')
 os.makedirs(raiz, exist_ok=True)
-for size in (192, 512):
-    png(os.path.join(raiz, f'icon-{size}.png'), size, size, icono(size))
-png(os.path.join(raiz, 'icon-maskable-512.png'), 512, 512, icono(512, maskable=True))
+# El manifiesto los declara como "maskable any": se dibujan con la zona segura
+# del maskable para que Android no recorte las barras.
+for size in (72, 96, 128, 144, 152, 192, 384, 512):
+    png(os.path.join(raiz, f'icon-{size}x{size}.png'), size, size, icono(size, maskable=True))
+png(os.path.join(raiz, 'icon-normal-512.png'), 512, 512, icono(512))
 print('íconos generados en', os.path.normpath(raiz))

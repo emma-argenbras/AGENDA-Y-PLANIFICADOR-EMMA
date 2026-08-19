@@ -1,0 +1,124 @@
+<button class="btn primario ancho" type="button" (click)="creando.set(true)">+ Registrar reunión</button>
+
+@if (sinActa().length) {
+  <h2 class="seccion">Sin acta — no cuentan</h2>
+  @for (r of sinActa(); track r.id) {
+    <div class="tarjeta alerta">
+      <div class="fila sep">
+        <div class="crece">
+          <span class="fuerte">{{ r.titulo }}</span>
+          <div class="mini">
+            {{ fechaLarga(r.fecha) }} ·
+            {{ diasDesde(r.fecha) === 0 ? 'hoy' : 'hace ' + diasDesde(r.fecha) + ' día(s)' }}
+          </div>
+        </div>
+        <button class="btn chico primario" type="button" (click)="abrirActa(r)">Escribir acta</button>
+      </div>
+      @if (diasDesde(r.fecha) > 0) {
+        <p class="mini" style="margin:8px 0 0">El acta se escribe el mismo día. Esta ya está tarde.</p>
+      }
+    </div>
+  }
+}
+
+<h2 class="seccion">Compromisos abiertos ({{ compromisos().length }})</h2>
+@if (compromisos().length) {
+  <div class="tarjeta">
+    @for (c of compromisos(); track c.reunion.id + '-' + c.idx) {
+      <div class="fila entre">
+        <button class="marca" type="button" (click)="marcarHecho(c.reunion.id, c.idx)"
+                aria-label="Marcar como cumplido"></button>
+        <div class="crece">
+          <div>{{ c.que }}</div>
+          <div class="mini">
+            {{ c.quien }} · para {{ c.cuando ? fechaCorta(c.cuando) : 'sin fecha' }}
+            @if (vencido(c.cuando)) { · <span class="vencido">VENCIDO</span> }
+            · {{ c.reunion.titulo }}
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+} @else {
+  <div class="tarjeta">
+    <div class="vacio">
+      <div class="titulo">Sin compromisos abiertos</div>
+      <div class="chico">Cada acta deja compromisos con un solo nombre y una fecha.</div>
+    </div>
+  </div>
+}
+
+<h2 class="seccion">Reuniones con acta ({{ conActa().length }})</h2>
+@if (conActa().length) {
+  @for (r of conActa(); track r.id) {
+    <div class="tarjeta">
+      <div class="fila sep">
+        <div class="crece">
+          <span class="fuerte">{{ r.titulo }}</span>
+          <div class="mini">{{ fechaLarga(r.fecha) }}@if (r.tarde) { · acta tardía }</div>
+        </div>
+        <button class="btn chico fantasma" type="button" (click)="abrirActa(r)">Editar</button>
+      </div>
+      <ul class="limpia" style="margin-top:8px">
+        @for (a of r.acta; track $index) {
+          <li class="chico">
+            @if (a.hecho) { ✓ }{{ a.que }} → {{ a.quien }} · {{ a.cuando ? fechaCorta(a.cuando) : 'sin fecha' }}
+          </li>
+        }
+      </ul>
+    </div>
+  }
+} @else {
+  <div class="tarjeta"><p class="chico" style="margin:0">Todavía ninguna.</p></div>
+}
+
+<app-dialogo [abierto]="creando()" titulo="Nueva reunión"
+             bajada="Al cerrarla te va a pedir los 3 campos del acta. Sin eso, la reunión no cuenta."
+             (cerrar)="creando.set(false)">
+  <label class="campo">
+    <span>Qué reunión</span>
+    <input type="text" placeholder="Directorio, reunión con Seba, comité de precios…"
+           [value]="nuevoTitulo()" (input)="nuevoTitulo.set($any($event.target).value)">
+  </label>
+  <label class="campo">
+    <span>Cuándo</span>
+    <input type="date" [value]="nuevaFecha()" (input)="nuevaFecha.set($any($event.target).value)">
+  </label>
+  <button pie class="btn primario" type="button" (click)="crear()">Crear</button>
+  <button pie class="btn" type="button" (click)="creando.set(false)">Cancelar</button>
+</app-dialogo>
+
+<app-dialogo [abierto]="!!editando()" [titulo]="'Acta — ' + (editando()?.titulo ?? '')"
+             (cerrar)="editando.set(null)">
+  <datalist id="personas">
+    @for (p of personas; track p) { <option [value]="p"></option> }
+  </datalist>
+
+  @for (d of decisiones(); track $index) {
+    <div class="decision">
+      <label class="campo">
+        <span>Qué se decidió</span>
+        <input type="text" [value]="d.que" (input)="campo($index, 'que', $any($event.target).value)">
+      </label>
+      <label class="campo">
+        <span>Quién lo hace (un solo nombre)</span>
+        <input type="text" list="personas" [value]="d.quien"
+               (input)="campo($index, 'quien', $any($event.target).value)">
+      </label>
+      <label class="campo">
+        <span>Para cuándo</span>
+        <input type="date" [value]="d.cuando" (input)="campo($index, 'cuando', $any($event.target).value)">
+      </label>
+      @if (decisiones().length > 1) {
+        <button class="btn chico fantasma" type="button" (click)="quitarDecision($index)">Quitar</button>
+      }
+    </div>
+  }
+  <button class="btn chico" type="button" (click)="agregarDecision()">+ Otra decisión</button>
+  @if (errorActa()) {
+    <p class="error">{{ errorActa() }}</p>
+    <p class="mini">Regla 1: si aparece más de un responsable, nadie es responsable.</p>
+  }
+  <button pie class="btn primario" type="button" (click)="cerrarActa()">Cerrar reunión</button>
+  <button pie class="btn" type="button" (click)="editando.set(null)">Dejar sin acta</button>
+</app-dialogo>

@@ -1,0 +1,111 @@
+@if (!hayClientId()) {
+  <div class="tarjeta">
+    <h2>Falta conectar Drive</h2>
+    <p class="chico">
+      Necesitás pegar una vez el Client ID de Google. Es un trámite de 5 minutos y queda hecho
+      para siempre. La app funciona igual sin esto.
+    </p>
+    <a class="btn primario" routerLink="/ajustes">Ir a Ajustes</a>
+  </div>
+}
+
+<div class="tarjeta">
+  <div class="fila">
+    <input class="crece" type="text" enterkeyhint="search"
+           placeholder="Preguntá: ¿qué dice la Ficha de Rol sobre…?"
+           [value]="pregunta()" (input)="pregunta.set($any($event.target).value)"
+           (keydown.enter)="buscar()" aria-label="Buscar en los documentos">
+    <button class="btn primario" type="button" (click)="buscar()" aria-label="Buscar">⌕</button>
+  </div>
+  <p class="mini" style="margin:8px 0 0">
+    Busca dentro del texto de los documentos, offline. Devuelve el párrafo exacto y de qué archivo salió.
+  </p>
+</div>
+
+@if (buscando()) { <p class="chico">Buscando…</p> }
+
+@if (resultados(); as rs) {
+  @if (rs.length) {
+    <h2 class="seccion">{{ rs.length }} pasajes encontrados</h2>
+    @for (r of rs; track $index) {
+      <div class="tarjeta">
+        <blockquote>
+          @for (p of partes(r); track $index) {
+            @if (p.marca) { <mark>{{ p.t }}</mark> } @else { {{ p.t }} }
+          }
+        </blockquote>
+        <div class="fila sep" style="margin-top:10px">
+          <span class="mini">{{ r.doc.name }}</span>
+          @if (r.doc.webViewLink) {
+            <a class="mini" [href]="r.doc.webViewLink" target="_blank" rel="noopener">Abrir en Drive</a>
+          }
+        </div>
+      </div>
+    }
+  } @else {
+    <div class="tarjeta">
+      <div class="vacio">
+        <div class="titulo">Sin coincidencias</div>
+        <div class="chico">
+          @if (leibles()) { Busqué en {{ leibles() }} documentos y no aparece nada con esas palabras. }
+          @else { No hay documentos indexados todavía. Sincronizá con Drive primero. }
+        </div>
+      </div>
+    </div>
+  }
+}
+
+<div class="tarjeta">
+  <div class="fila sep">
+    <div class="crece">
+      <span class="fuerte">{{ conectado() ? 'Drive conectado' : 'Drive sin conectar' }}</span>
+      <div class="mini">
+        @if (drive.progreso(); as p) { {{ p.hecho }}/{{ p.total }} · {{ p.nombre }} }
+        @else if (ultimaSync()) { Última sincronización: {{ ultimaSync() }} }
+        @else { Nunca sincronizado. }
+      </div>
+    </div>
+    <button class="btn chico" [class.primario]="!indice().length" type="button"
+            [disabled]="sincronizando()" (click)="sincronizar()">
+      {{ indice().length ? 'Actualizar' : 'Traer documentos' }}
+    </button>
+  </div>
+  @if (error()) { <p class="error">{{ error() }}</p> }
+</div>
+
+<h2 class="seccion">Archivos ({{ leibles() }} indexados)</h2>
+@if (indice().length) {
+  <div class="tarjeta">
+    @for (d of indice(); track d.id) {
+      <div class="fila sep entre">
+        <div class="crece">
+          <div>{{ d.name }}</div>
+          <div class="mini">
+            {{ d.ruta }}
+            @if (d.leible) { {{ miles(d.chars) }} mil caracteres indexados }
+            @else { no se puede leer el contenido ({{ tipoCorto(d.mimeType) }}) }
+            @if (d.error) { · {{ d.error }} }
+          </div>
+        </div>
+        @if (d.leible) {
+          <button class="btn chico fantasma" type="button" (click)="ver(d)">Ver</button>
+        } @else if (d.webViewLink) {
+          <a class="btn chico fantasma" [href]="d.webViewLink" target="_blank" rel="noopener">Abrir</a>
+        }
+      </div>
+    }
+  </div>
+  <p class="mini">Los PDF e imágenes se listan pero no se indexan: no hay lector de PDF en la app.</p>
+} @else {
+  <div class="tarjeta">
+    <div class="vacio">
+      <div class="titulo">Todavía no bajaste nada</div>
+      <div class="chico">El check-in, la agenda y los umbrales no dependen de Drive.</div>
+    </div>
+  </div>
+}
+
+<app-dialogo [abierto]="!!viendo()" [titulo]="viendo()?.nombre ?? ''" (cerrar)="viendo.set(null)">
+  <pre class="doc">{{ viendo()?.texto }}</pre>
+  <button pie class="btn" type="button" (click)="viendo.set(null)">Cerrar</button>
+</app-dialogo>

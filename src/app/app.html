@@ -1,0 +1,54 @@
+<header>
+  <div class="crece">
+    <h1>{{ titulo() }}</h1>
+  </div>
+  <button class="icono" type="button" aria-label="Más pantallas"
+          [attr.aria-expanded]="menuAbierto()" (click)="menuAbierto.set(!menuAbierto())">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>
+    </svg>
+  </button>
+</header>
+
+@if (menuAbierto()) {
+  <div class="menu-fondo" (click)="cerrarMenu()"></div>
+  <nav class="menu" aria-label="Más pantallas">
+    <a routerLink="/delegar" (click)="cerrarMenu()">
+      <span class="fuerte">Para delegar</span>
+      <span class="mini">Lo que hiciste y no era tuyo</span>
+    </a>
+    <a routerLink="/indicadores" (click)="cerrarMenu()">
+      <span class="fuerte">Indicadores</span>
+      <span class="mini">Los 3 números que te tocan</span>
+    </a>
+    <a routerLink="/reglas" (click)="cerrarMenu()">
+      <span class="fuerte">Ficha de Rol</span>
+      <span class="mini">Decisiones, tabla y reglas</span>
+    </a>
+    <a routerLink="/ajustes" (click)="cerrarMenu()">
+      <span class="fuerte">Ajustes</span>
+      <span class="mini">Nube, Drive, avisos y backup</span>
+    </a>
+  </nav>
+}
+
+<main>
+  <router-outlet />
+</main>
+
+<nav id="tabs" aria-label="Secciones">
+  @for (t of tabs; track t.ruta) {
+    <a [routerLink]="t.ruta" routerLinkActive="activo">
+      <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true">
+        <path [attr.d]="t.icono" fill="none" stroke="currentColor" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      {{ t.texto }}
+      @if (marca(t.ruta)) { <i class="pin" aria-label="pendiente"></i> }
+    </a>
+  }
+</nav>
+
+<div class="aviso" [class.visible]="avisos.visible()" role="status" aria-live="polite">
+  {{ avisos.texto() }}
+</div>

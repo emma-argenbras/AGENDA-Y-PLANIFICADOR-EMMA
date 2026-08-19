@@ -1,0 +1,23 @@
+rules_version = '2';
+
+// Un solo usuario, sus propios datos y nada más.
+//
+// Cada documento cuelga de usuarios/{uid}: el que entró solo puede leer y
+// escribir lo suyo. No hay lectura pública ni compartida, y todo lo que quede
+// fuera de ese árbol está denegado por defecto.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /usuarios/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+      match /{documento=**} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    match /{documento=**} {
+      allow read, write: if false;
+    }
+  }
+}

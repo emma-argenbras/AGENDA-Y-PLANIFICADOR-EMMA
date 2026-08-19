@@ -1,0 +1,192 @@
+@if (ajustes(); as a) {
+  <!-- ── Nube ───────────────────────────────────────────────────────────── -->
+  <h2 class="seccion">Tus datos: {{ datos.modo() === 'nube' ? 'en la nube' : 'en este dispositivo' }}</h2>
+  <div class="tarjeta">
+    @switch (firebase.estado()) {
+      @case ('sin-config') {
+        <p class="chico">
+          Ahora mismo todo vive solo en este teléfono. Para tener el mismo historial en la compu
+          y que no dependa de un aparato, pegá la configuración de tu proyecto de Firebase.
+        </p>
+        <label class="campo">
+          <span>Configuración de Firebase</span>
+          <textarea placeholder='Pegá acá el bloque que te da Firebase: const firebaseConfig = { apiKey: "…", … }'
+                    [value]="configTexto()" (input)="configTexto.set($any($event.target).value)"></textarea>
+        </label>
+        <div class="btn-fila">
+          <button class="btn primario" type="button" (click)="guardarConfig()">Conectar proyecto</button>
+          <button class="btn chico fantasma" type="button" (click)="ayudaFirebase.set(true)">¿De dónde saco esto?</button>
+        </div>
+      }
+      @case ('conectado') {
+        <div class="fila sep">
+          <div class="crece">
+            <span class="fuerte">Sincronizado</span>
+            <div class="mini">{{ correo() }}</div>
+          </div>
+          <button class="btn chico" type="button" (click)="salir()">Salir</button>
+        </div>
+        <div class="btn-fila" style="margin-top:12px">
+          <button class="btn chico" type="button" [disabled]="datos.sincronizando()" (click)="subir()">
+            Subir lo de este dispositivo
+          </button>
+          <button class="btn chico fantasma" type="button" (click)="firebase.olvidarConfig()">Desvincular proyecto</button>
+        </div>
+        <p class="mini" style="margin:10px 0 0">
+          Los cierres, prioridades y actas se guardan en la nube y siguen funcionando sin señal.
+          El texto de los documentos de Drive queda siempre local.
+        </p>
+      }
+      @default {
+        <div class="fila sep">
+          <div class="crece">
+            <span class="fuerte">Proyecto configurado</span>
+            <div class="mini">Falta entrar con tu cuenta de Google.</div>
+          </div>
+          <button class="btn primario chico" type="button" (click)="entrar()">Entrar</button>
+        </div>
+        @if (firebase.error()) { <p class="error">{{ firebase.error() }}</p> }
+      }
+    }
+  </div>
+
+  <!-- ── Drive ──────────────────────────────────────────────────────────── -->
+  <h2 class="seccion">Google Drive (solo lectura)</h2>
+  <div class="tarjeta">
+    <label class="campo">
+      <span>Client ID de Google</span>
+      <input type="text" placeholder="123456-abc.apps.googleusercontent.com"
+             [value]="clientId()" (input)="clientId.set($any($event.target).value)">
+    </label>
+    <label class="campo">
+      <span>ID de la carpeta</span>
+      <input type="text" [value]="folderId()" (input)="folderId.set($any($event.target).value)">
+    </label>
+    <div class="btn-fila">
+      <button class="btn primario" type="button" (click)="guardarDrive()">Guardar</button>
+      @if (driveOk()) {
+        <button class="btn" type="button" (click)="desconectarDrive()">Desconectar</button>
+      } @else {
+        <button class="btn" type="button" (click)="conectarDrive()">Conectar con Google</button>
+      }
+      <button class="btn chico fantasma" type="button" (click)="ayudaDrive.set(true)">Cómo saco el Client ID</button>
+    </div>
+  </div>
+
+  <!-- ── Avisos ─────────────────────────────────────────────────────────── -->
+  <h2 class="seccion">Avisos</h2>
+  <div class="tarjeta">
+    <label class="campo">
+      <span>A la mañana: las 3 prioridades</span>
+      <input type="time" [value]="manana()" (input)="manana.set($any($event.target).value)">
+    </label>
+    <label class="campo">
+      <span>A la noche: el cierre de una frase</span>
+      <input type="time" [value]="noche()" (input)="noche.set($any($event.target).value)">
+    </label>
+    <div class="btn-fila">
+      <button class="btn primario" type="button" (click)="activarAvisos()">
+        {{ a.notificaciones ? 'Guardar horarios' : 'Activar avisos' }}
+      </button>
+      @if (a.notificaciones) { <button class="btn" type="button" (click)="apagarAvisos()">Apagar</button> }
+      <button class="btn chico" type="button" (click)="probarAviso()">Probar</button>
+    </div>
+    <p class="mini" style="margin:10px 0 0">Permiso del navegador: {{ push.permiso }}.</p>
+
+    @if (firebase.estado() === 'conectado') {
+      <div class="entre" style="margin-top:12px">
+        <div class="fila sep">
+          <div class="crece">
+            <span class="fuerte">Push con la app cerrada</span>
+            <div class="mini">
+              Registra este dispositivo. Los envíos los hace la función programada de Firebase
+              (carpeta functions/); sin desplegarla, esto solo guarda el token.
+            </div>
+          </div>
+          <button class="btn chico" type="button" (click)="activarPush()">Registrar</button>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- ── Aspecto ────────────────────────────────────────────────────────── -->
+  <h2 class="seccion">Aspecto</h2>
+  <div class="tarjeta">
+    <div class="chips">
+      @for (t of temas; track t.id) {
+        <button class="chip" type="button" [class.activo]="tema.preferencia() === t.id"
+                (click)="elegirTema(t.id)">{{ t.texto }}</button>
+      }
+    </div>
+  </div>
+
+  <!-- ── Backup ─────────────────────────────────────────────────────────── -->
+  <h2 class="seccion">Backup</h2>
+  <div class="tarjeta">
+    <p class="chico">
+      @if (datos.modo() === 'nube') {
+        Tus datos ya están en la nube, pero un archivo aparte nunca está de más.
+      } @else {
+        Todo vive en este dispositivo: si lo cambiás, exportá y volvé a importar.
+      }
+    </p>
+    <div class="btn-fila">
+      <button class="btn" type="button" (click)="exportar()">Exportar backup</button>
+      <label class="btn" style="cursor:pointer">
+        Importar backup
+        <input type="file" accept="application/json" (change)="importar($event)" hidden>
+      </label>
+      <button class="btn peligro" type="button" (click)="confirmandoBorrado.set(true)">Borrar todo</button>
+    </div>
+  </div>
+
+  @if (error()) { <p class="error">{{ error() }}</p> }
+
+  <h2 class="seccion">Sobre la app</h2>
+  <div class="tarjeta">
+    <p class="mini">
+      Agenda EVB — uso personal, un solo usuario. La Ficha de Rol, la tabla de delegación, las 8
+      categorías y los 4 umbrales están escritos en el código y versionados en el repositorio.
+      No se editan desde acá por diseño.
+    </p>
+    <button class="btn chico fantasma" type="button" (click)="buscarActualizacion()">Buscar actualización</button>
+  </div>
+}
+
+<app-dialogo [abierto]="ayudaFirebase()" titulo="Crear el proyecto de Firebase (una sola vez)"
+             (cerrar)="ayudaFirebase.set(false)">
+  <ol class="num">
+    <li>Entrá a <span class="fuerte">console.firebase.google.com</span> con tu cuenta y creá un proyecto.</li>
+    <li>Compilación → <span class="fuerte">Firestore Database</span> → Crear base de datos → modo producción, región southamerica-east1.</li>
+    <li>Compilación → <span class="fuerte">Authentication</span> → Comenzar → habilitá <span class="fuerte">Google</span>.</li>
+    <li>En Authentication → Settings → Authorized domains, agregá el dominio donde abrís la app.</li>
+    <li>Configuración del proyecto → Tus apps → <span class="fuerte">Web</span> → registrá la app y copiá el bloque <span class="fuerte">firebaseConfig</span>.</li>
+    <li>Pegalo acá arriba y tocá Conectar proyecto.</li>
+  </ol>
+  <p class="mini">
+    Esos datos no son secretos: viajan en cualquier app web. Lo que protege tus datos son las
+    reglas de firestore.rules, que atan cada documento a tu usuario.
+  </p>
+  <button pie class="btn primario" type="button" (click)="ayudaFirebase.set(false)">Entendido</button>
+</app-dialogo>
+
+<app-dialogo [abierto]="ayudaDrive()" titulo="Client ID de Google (una sola vez)"
+             (cerrar)="ayudaDrive.set(false)">
+  <ol class="num">
+    <li>console.cloud.google.com → mismo proyecto que Firebase.</li>
+    <li>APIs y servicios → Biblioteca → activá <span class="fuerte">Google Drive API</span>.</li>
+    <li>Pantalla de consentimiento OAuth: Externo, y agregate como usuario de prueba.</li>
+    <li>Credenciales → Crear credenciales → ID de cliente OAuth → Aplicación web.</li>
+    <li>En «Orígenes de JavaScript autorizados» poné la dirección donde abrís la app.</li>
+    <li>Copiá el Client ID que termina en .apps.googleusercontent.com y pegalo acá.</li>
+  </ol>
+  <p class="mini">No hace falta client secret: la app pide solo permiso de lectura.</p>
+  <button pie class="btn primario" type="button" (click)="ayudaDrive.set(false)">Entendido</button>
+</app-dialogo>
+
+<app-dialogo [abierto]="confirmandoBorrado()" titulo="¿Borrar todo?"
+             bajada="Se borran cierres, prioridades, actas y la prueba. Las reglas de la Ficha de Rol quedan: están en el código."
+             (cerrar)="confirmandoBorrado.set(false)">
+  <button pie class="btn peligro" type="button" (click)="borrarTodo()">Borrar todo</button>
+  <button pie class="btn" type="button" (click)="confirmandoBorrado.set(false)">No</button>
+</app-dialogo>
