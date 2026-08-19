@@ -42,7 +42,9 @@ registro") en vez de mentir con ceros.
 
 ## Publicarla e instalarla en el celular
 
-1. **Activar Pages una vez**: *Settings → Pages → Build and deployment → Source: **GitHub Actions***.
+1. El workflow activa GitHub Pages solo la primera vez (`configure-pages` con `enablement: true`),
+   así que no hace falta tocar *Settings*. Si alguna vez falla con *Not Found*, se activa a mano en
+   *Settings → Pages → Build and deployment → Source: **GitHub Actions***.
 2. El workflow `.github/workflows/pages.yml` publica el repo entero en cada push a `main` o a una
    rama `claude/**`. Como el repositorio todavía no tiene `main`, publica desde esta rama tal cual
    está; cuando la mergees a `main`, sigue funcionando igual. También se puede disparar a mano desde
