@@ -42,11 +42,14 @@ registro") en vez de mentir con ceros.
 
 ## Publicarla e instalarla en el celular
 
-1. El workflow activa GitHub Pages solo la primera vez (`configure-pages` con `enablement: true`),
-   así que no hace falta tocar *Settings*. Si alguna vez falla con *Not Found*, se activa a mano en
-   *Settings → Pages → Build and deployment → Source: **GitHub Actions***.
-2. El workflow `.github/workflows/pages.yml` publica el repo entero en cada push a `main` o a una
-   rama `claude/**`. Como el repositorio todavía no tiene `main`, publica desde esta rama tal cual
+1. **Activar Pages una vez, a mano**: *Settings → Pages → Build and deployment → Source:
+   **GitHub Actions***. El workflow intenta activarlo solo (`enablement: true`), pero GitHub no le
+   permite al token del workflow crear el sitio en este repositorio: falla con *"Create Pages site
+   failed: Resource not accessible by integration"* hasta que lo actives vos. Es un solo click y
+   queda hecho para siempre.
+2. Con Pages activado, volvé a *Actions → Deploy PWA a GitHub Pages* y usá *Re-run jobs* en la
+   última corrida (o hacé cualquier push). El workflow `.github/workflows/pages.yml` publica el repo entero en cada push a `main` o a una rama
+   `claude/**`. Como el repositorio todavía no tiene `main`, publica desde esta rama tal cual
    está; cuando la mergees a `main`, sigue funcionando igual. También se puede disparar a mano desde
    *Actions → Deploy PWA a GitHub Pages → Run workflow*.
 3. Queda en `https://emma-argenbras.github.io/AGENDA-Y-PLANIFICADOR-EMMA/`.

@@ -24,7 +24,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
         with:
-          enablement: true   # habilita Pages solo, sin tener que tocar Settings
+          # Intenta habilitar Pages solo. En este repo el token del workflow no tiene permiso
+          # para crearlo, así que hay que activarlo una vez en Settings → Pages → GitHub Actions.
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
