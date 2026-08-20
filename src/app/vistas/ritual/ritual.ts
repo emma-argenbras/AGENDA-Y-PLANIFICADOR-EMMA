@@ -101,8 +101,11 @@ export class Ritual {
       ? ['Cerrar la que termina', 'Mirar los números', 'Armar la que viene']
       : ['Mirar los números', 'Armar la que viene']);
 
-  /** Cuando no hay nada que cerrar, el primer paso es mirar los números. */
-  protected readonly indice = computed(() => this.paso() - (this.hayQueCerrar() ? 0 : 1));
+  /**
+   * Posición dentro de la guía, en base cero. Con cierre, los pasos 1-2-3
+   * son los índices 0-1-2; sin cierre, la guía tiene dos pasos y el 2 es el 0.
+   */
+  protected readonly indice = computed(() => this.paso() - (this.hayQueCerrar() ? 1 : 2));
 
   protected avanzar(): void {
     if (this.paso() >= 3) return;

@@ -64,3 +64,21 @@ describe('cierre de la semana', () => {
     expect(candidatos(plan())).toEqual(['Margen cielorrasos', 'Reemplazo de Facundo']);
   });
 });
+
+describe('la guía de pasos', () => {
+  // Regla: con cierre son tres pasos (1,2,3 → índices 0,1,2); sin cierre son
+  // dos y se arranca en el 2 (→ índice 0). Un desfase acá resalta el paso
+  // equivocado, que es lo que pasaba.
+  const indice = (paso: number, hayQueCerrar: boolean) => paso - (hayQueCerrar ? 1 : 2);
+
+  it('con semana por cerrar, el primer paso es el primero', () => {
+    expect(indice(1, true)).toBe(0);
+    expect(indice(2, true)).toBe(1);
+    expect(indice(3, true)).toBe(2);
+  });
+
+  it('sin nada que cerrar, la guía tiene dos pasos', () => {
+    expect(indice(2, false)).toBe(0);
+    expect(indice(3, false)).toBe(1);
+  });
+});
