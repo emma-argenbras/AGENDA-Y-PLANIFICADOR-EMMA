@@ -17,6 +17,7 @@ import { esFinDeSemana, fechaCorta, fechaLarga, hoyISO, inicioSemana, sumarDias 
 import { esTuyo, ordenar, type Pendiente } from '../../core/pendientes';
 import { TIPO, aHora, aMinutos, ordenarDia, type Evento } from '../../core/agenda';
 import { PRUEBA, estadoPrueba } from '../../core/prueba-luciana';
+import { estadoSemanal } from '../../core/semana';
 import type { Checkin, Derivacion, Prioridad } from '../../core/modelo';
 
 const MAX = 3;
@@ -62,6 +63,7 @@ export class Hoy {
       plan: await this.datos.plan(inicioSemana(this.hoy)),
       eventos: await this.datos.eventos(this.hoy),
       prueba: await this.datos.prueba(),
+      planProximo: await this.datos.plan(sumarDias(inicioSemana(this.hoy), 7)),
       pendientes: await this.datos.pendientes(),
       reuniones: await this.datos.reuniones(),
     }),
@@ -99,6 +101,13 @@ export class Hoy {
   /** La prueba salió de las pestañas: si hay algo vencido, se avisa acá. */
   protected readonly pruebaVencida = computed(() =>
     estadoPrueba(this.hoy, this.datosDelDia.value()?.prueba ?? {}).vencidas);
+
+  /** Viernes o domingo: la app te lleva al ritual semanal en vez de esperarte. */
+  protected readonly ritual = computed(() => estadoSemanal(
+    this.hoy,
+    this.datosDelDia.value()?.plan ?? null,
+    this.datosDelDia.value()?.planProximo ?? null,
+  ));
 
   /* ── El plan de la semana, atado al día ────────────────────────────────── */
 

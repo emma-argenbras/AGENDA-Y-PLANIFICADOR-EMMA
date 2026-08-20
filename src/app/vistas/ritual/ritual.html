@@ -1,0 +1,159 @@
+<ol class="pasos-guia">
+  @for (p of pasos(); track p; let i = $index) {
+    <li [class.actual]="i === indice()" [class.pasado]="i < indice()">{{ p }}</li>
+  }
+</ol>
+
+<!-- ── Paso 1: cerrar la que termina ────────────────────────────────────── -->
+@if (paso() === 1 && hayQueCerrar()) {
+  <h2 class="titulo-paso">¿Qué pasó con los 3 objetivos?</h2>
+  <p class="chico">Semana del {{ fechaCorta(plan()!.lunes) }}. Marcá los que cumpliste. Lo que no se cumplió no se tira: vuelve como candidato de la semana que viene.</p>
+
+  @for (o of plan()!.objetivos; track o.id) {
+    <div class="tarjeta objetivo" (click)="alternar(o)">
+      <button class="marca" type="button" [class.hecho]="o.hecho" [attr.aria-pressed]="o.hecho"
+              (click)="$event.stopPropagation(); alternar(o)" aria-label="Marcar cumplido">
+        @if (o.hecho) {
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+            <path d="M4 10.5 8 14.5 16 6" fill="none" stroke="currentColor" stroke-width="2.6"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        }
+      </button>
+      <div class="crece">
+        <div [class.tachado]="o.hecho">{{ o.texto }}</div>
+        <div class="mini">{{ nombreUnidad(o.unidad) }}</div>
+      </div>
+    </div>
+  }
+
+  <label class="campo" style="margin-top:14px">
+    <span>Una línea sobre la semana (opcional)</span>
+    <textarea [value]="nota()" (input)="nota.set($any($event.target).value)"
+              placeholder="Qué se interpuso, qué salió mejor de lo esperado…"></textarea>
+  </label>
+
+  <button class="btn primario ancho" type="button" (click)="cerrarSemana()">
+    Cerrar la semana ({{ cierre().cumplidos }}/{{ cierre().total }})
+  </button>
+}
+
+<!-- ── Paso 2: los números ──────────────────────────────────────────────── -->
+@if (paso() === 2) {
+  <h2 class="titulo-paso">Cómo se te fue la semana</h2>
+
+  <div class="tiles">
+    <div class="tarjeta tile">
+      <div class="rotulo">Días con cierre</div>
+      <div class="cifra tabular">{{ diasConCierre() }}<span class="de">/5</span></div>
+    </div>
+    <div class="tarjeta tile" [class.alerta]="horasFuga() > 0">
+      <div class="rotulo">No eran tuyas</div>
+      <div class="cifra tabular">{{ horasFuga() }}<span class="de"> h</span></div>
+    </div>
+  </div>
+
+  @if (cierre().total) {
+    <div class="tarjeta">
+      <div class="fila sep">
+        <span class="fuerte">Objetivos cumplidos</span>
+        <span class="cifra-chica tabular">{{ cierre().cumplidos }}/{{ cierre().total }}</span>
+      </div>
+      @if (cierre().sinCumplir.length) {
+        <ul class="limpia" style="margin-top:8px">
+          @for (o of cierre().sinCumplir; track o.id) { <li class="chico">Quedó: {{ o.texto }}</li> }
+        </ul>
+      }
+    </div>
+  }
+
+  @for (u of umbrales(); track u.titulo) {
+    <div class="tarjeta" [class.alerta]="u.resultado.estado === 'rojo'">
+      <div class="fila sep" style="align-items:flex-start;gap:12px">
+        <span class="fuerte">{{ u.titulo }}</span>
+        <app-semaforo [estado]="u.resultado.estado" />
+      </div>
+      <p class="chico" style="margin:6px 0 0">{{ u.resultado.texto }}</p>
+    </div>
+  }
+
+  <div class="tarjeta">
+    <app-barras-categoria [porCategoria]="totales().porCategoria" [total]="totales().total" />
+  </div>
+
+  @if (fugas().length) {
+    <div class="tarjeta alerta">
+      <span class="fuerte">Lo que le tenés que pasar a alguien</span>
+      @for (f of fugas(); track f.dueno) {
+        <div class="entre">
+          <div class="fila sep">
+            <span>{{ f.nombre }}</span>
+            <span class="chico tabular nowrap">{{ f.horas }} h</span>
+          </div>
+          <div class="mini">{{ f.tareas.join(' · ') }}</div>
+        </div>
+      }
+      <a class="btn chico" routerLink="/delegar" style="margin-top:10px">Ver la lista</a>
+    </div>
+  }
+
+  <div class="btn-fila">
+    @if (hayQueCerrar()) { <button class="btn" type="button" (click)="volver()">Atrás</button> }
+    <button class="btn primario crece" type="button" (click)="avanzar()">Armar la que viene</button>
+  </div>
+}
+
+<!-- ── Paso 3: armar la que viene ───────────────────────────────────────── -->
+@if (paso() === 3) {
+  <h2 class="titulo-paso">Tres objetivos para la semana del {{ fechaCorta(lunesDestino()) }}</h2>
+  <p class="chico">
+    Tres, no treinta. Cada uno atado a una unidad. Si no entra en tres, no es un objetivo de la
+    semana: es una lista de deseos.
+  </p>
+
+  @for (o of nuevos(); track o.id) {
+    <div class="tarjeta objetivo">
+      <span class="numero">{{ $index + 1 }}</span>
+      <div class="crece">
+        <div>{{ o.texto }}</div>
+        <div class="mini">{{ nombreUnidad(o.unidad) }}</div>
+      </div>
+      <button class="btn chico fantasma" type="button" (click)="quitar(o.id)" aria-label="Quitar">✕</button>
+    </div>
+  }
+
+  @if (nuevos().length < max) {
+    @if (sugerencias().length) {
+      <div class="rotulo" style="margin:16px 0 6px">De lo que ya tenés anotado</div>
+      <div class="chips">
+        @for (s of sugerencias(); track s.texto) {
+          <button class="chip" type="button" (click)="agregar(s.texto)">
+            @if (s.arrastre) { ↩ }{{ s.texto }}
+          </button>
+        }
+      </div>
+    }
+
+    <div class="rotulo" style="margin:16px 0 6px">Unidad</div>
+    <div class="chips" style="margin-bottom:10px">
+      @for (u of unidades; track u.id) {
+        <button class="chip" type="button" [class.activo]="unidad() === u.id"
+                (click)="unidad.set(u.id)">{{ u.corto }}</button>
+      }
+    </div>
+
+    <div class="fila">
+      <input class="crece" type="text" placeholder="Escribir un objetivo…" enterkeyhint="done"
+             [value]="texto()" (input)="texto.set($any($event.target).value)"
+             (keydown.enter)="agregar()" aria-label="Nuevo objetivo">
+      <button class="btn primario" type="button" (click)="agregar()" aria-label="Agregar">+</button>
+    </div>
+  } @else {
+    <p class="mini">Tres es el máximo. Sacá uno si querés cambiarlo.</p>
+  }
+
+  <div class="btn-fila" style="margin-top:18px">
+    <button class="btn" type="button" (click)="volver()">Atrás</button>
+    <button class="btn primario crece" type="button" (click)="guardarPlan()">Guardar la semana</button>
+  </div>
+}

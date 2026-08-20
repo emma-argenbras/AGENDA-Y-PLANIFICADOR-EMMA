@@ -14,6 +14,16 @@
   </div>
 }
 
+@if (ritual().momento !== 'nada') {
+  <a class="tarjeta ritual" routerLink="/ritual">
+    <div class="crece">
+      <span class="fuerte">{{ ritual().titulo }}</span>
+      <div class="mini">{{ ritual().motivo }}</div>
+    </div>
+    <span class="flecha">›</span>
+  </a>
+}
+
 @if (pruebaVencida() && !hayRevisionHoy) {
   <div class="tarjeta alerta">
     <div class="fila sep">

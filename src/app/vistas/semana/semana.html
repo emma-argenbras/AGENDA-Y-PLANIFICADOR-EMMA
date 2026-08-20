@@ -97,6 +97,8 @@
 </div>
 
 <!-- ── Umbrales ─────────────────────────────────────────────────────────── -->
+<a class="btn ancho" routerLink="/ritual" style="margin-bottom:4px">Cerrar y armar la semana</a>
+
 <h2 class="seccion">Umbrales de control</h2>
 @for (u of umbrales(); track u.id) {
   <div class="tarjeta" [class.alerta]="u.resultado.estado === 'rojo'">

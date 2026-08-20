@@ -136,6 +136,56 @@ exports.recordatorioNoche = onSchedule(
   },
 );
 
+/** Lunes de la semana de una fecha, en formato ISO. */
+function lunesDe(iso) {
+  const d = new Date(iso + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * El ritual semanal. Sin esto el planificador existe pero nadie lo abre: los
+ * demás recordatorios son todos diarios, y una semana no se planifica sola.
+ */
+exports.recordatorioCierreSemana = onSchedule(
+  { schedule: '0 17 * * 5', timeZone: ZONA, region: REGION },
+  async () => {
+    const lunes = lunesDe(hoyISO());
+    for (const uid of await usuarios()) {
+      const ajustes = (await kv(uid, 'ajustes')) || {};
+      if (!ajustes.notificaciones) continue;
+      const plan = await kv(uid, `plan:${lunes}`);
+      if (!plan || plan.cerrado) continue;
+      const cumplidos = (plan.objetivos || []).filter(o => o.hecho).length;
+      const total = (plan.objetivos || []).length;
+      await enviar(
+        uid,
+        'Cerrá la semana',
+        `Vas ${cumplidos} de ${total} objetivos. Cinco minutos: marcás lo que se cumplió y elegís los tres de la semana que viene.`,
+        'agenda-cierre-semana',
+      );
+    }
+  },
+);
+
+exports.recordatorioPlanSemana = onSchedule(
+  { schedule: '0 19 * * 0', timeZone: ZONA, region: REGION },
+  async () => {
+    const lunes = sumarDias(lunesDe(hoyISO()), 7);
+    for (const uid of await usuarios()) {
+      const ajustes = (await kv(uid, 'ajustes')) || {};
+      if (!ajustes.notificaciones) continue;
+      if (await kv(uid, `plan:${lunes}`)) continue;   // ya la armaste
+      await enviar(
+        uid,
+        'Mañana arranca la semana sin plan',
+        'Tres objetivos y listo. Si el lunes empieza sin ellos, lo urgente elige por vos.',
+        'agenda-plan-semana',
+      );
+    }
+  },
+);
+
 // Las cuatro revisiones de la prueba de Luciana: 14/08, 21/08, 28/08 y 04/09.
 const REVISIONES = ['2026-08-14', '2026-08-21', '2026-08-28', '2026-09-04'];
 

@@ -251,6 +251,38 @@ await paso('semana: tocar un día muestra su detalle', async () => {
   await p.waitForSelector('app-columnas-dia .detalle');
 });
 
+await paso('el ritual: cierra la semana que termina', async () => {
+  await p.goto(URL + '#/ritual');
+  await p.waitForSelector('text=¿Qué pasó con los 3 objetivos?');
+  // se cumplió uno de los tres; los otros dos quedan sin cumplir
+  await p.locator('.objetivo:has-text("Cerrar exclusividad Curitiba") .marca').click();
+  await p.fill('textarea', 'Semana comida por reuniones.');
+  await p.click('button:has-text("Cerrar la semana")');
+  await p.waitForSelector('text=Cómo se te fue la semana');
+});
+
+await paso('el ritual: muestra los números antes de dejarte planificar', async () => {
+  const t = await p.textContent('main');
+  if (!t.includes('Días con cierre')) throw new Error('falta el resumen de la semana');
+  if (!t.includes('Ejecución operativa')) throw new Error('faltan los umbrales');
+  await p.click('button:has-text("Armar la que viene")');
+  await p.waitForSelector('text=Tres objetivos para la semana');
+});
+
+await paso('el ritual: lo no cumplido vuelve como candidato y se guarda el plan', async () => {
+  // el cumplido no vuelve…
+  if (await p.locator('.chip:has-text("Cerrar exclusividad Curitiba")').count()) {
+    throw new Error('un objetivo ya cumplido volvió como candidato');
+  }
+  // …y el que quedó a medias sí, con la flecha de arrastre
+  const chip = p.locator('.chip:has-text("Ordenar pipeline de Construcción")');
+  if (!(await chip.count())) throw new Error('el objetivo sin cumplir no volvió como candidato');
+  await chip.click();
+  await p.waitForSelector('.objetivo:has-text("Ordenar pipeline de Construcción")');
+  await p.click('button:has-text("Guardar la semana")');
+  await p.waitForSelector('text=Umbrales de control');   // vuelve a Semana
+});
+
 await paso('prueba de Luciana: revisión vencida y cuenta atrás', async () => {
   await p.goto(URL + '#/prueba');
   await p.waitForSelector('text=Prueba en riesgo');

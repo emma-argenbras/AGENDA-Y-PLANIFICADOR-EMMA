@@ -79,3 +79,15 @@ a { color: var(--acento); }
   text-decoration: underline;
   cursor: pointer;
 }
+
+.ritual {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--acento-tinta);
+  background: var(--acento);
+  border-color: var(--acento);
+}
+.ritual .mini { color: inherit; opacity: .85; }
+.ritual .flecha { font-size: 22px; opacity: .8; }
