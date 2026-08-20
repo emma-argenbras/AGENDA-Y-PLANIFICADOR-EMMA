@@ -16,6 +16,8 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
   .catch(() => { console.error('Falta Playwright: npm i -D playwright'); process.exit(2); });
 
 const URL = process.env.APP_URL || 'http://127.0.0.1:8099/';
+// PDF mínimo con una línea de texto real adentro, para el paso de Documentos.
+const PDF_B64 = '255044462d312e340a312030206f626a0a3c3c202f54797065202f436174616c6f67202f5061676573203220302052203e3e0a656e646f626a0a322030206f626a0a3c3c202f54797065202f5061676573202f4b696473205b33203020525d202f436f756e742031203e3e0a656e646f626a0a332030206f626a0a3c3c202f54797065202f50616765202f506172656e74203220302052202f4d65646961426f78205b30203020363132203739325d202f5265736f7572636573203c3c202f466f6e74203c3c202f4631203520302052203e3e203e3e202f436f6e74656e7473203420302052203e3e0a656e646f626a0a342030206f626a0a3c3c202f4c656e677468203738203e3e0a73747265616d0a4254202f46312031342054662037322037303020546420284d617267656e206d696e696d6f206465206369656c6f727261736f73205056433a20333820706f72206369656e746f2920546a2045540a656e6473747265616d0a656e646f626a0a352030206f626a0a3c3c202f54797065202f466f6e74202f53756274797065202f5479706531202f42617365466f6e74202f48656c766574696361203e3e0a656e646f626a0a787265660a3020360a303030303030303030302036353533352066200a30303030303030303039203030303030206e200a30303030303030303538203030303030206e200a30303030303030313135203030303030206e200a30303030303030323431203030303030206e200a30303030303030333639203030303030206e200a747261696c65720a3c3c202f53697a652036202f526f6f74203120302052203e3e0a7374617274787265660a3433390a2525454f460a';
 const errores = [];
 
 const b = await chromium.launch();
@@ -355,6 +357,60 @@ await paso('las otras pantallas abren sin romperse', async () => {
   for (const r of ['reglas', 'indicadores', 'ajustes', 'docs']) {
     await p.goto(URL + '#/' + r);
     await p.waitForSelector('main .tarjeta', { timeout: 5000 });
+  }
+});
+
+await paso('documentos: lee un PDF de Drive y lo deja buscable', async () => {
+  // Contexto propio con los service workers bloqueados: el de la app captura
+  // los fetch y la intercepción de Playwright nunca los vería. Se responde a
+  // la API de Drive desde acá para recorrer el camino real —listar, bajar,
+  // extraer el texto, indexar y buscar— sin red ni cuenta de Google.
+  const ctx2 = await b.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
+  const p2 = await ctx2.newPage();
+  const ID = 'archivo-pdf-1';
+  try {
+    await p2.route('**/drive/v3/files?*', r => r.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ files: [{
+        id: ID, name: 'Manual de Gestión Comercial.pdf', mimeType: 'application/pdf',
+        modifiedTime: '2026-08-01T10:00:00Z',
+      }] }),
+    }));
+    await p2.route('**/drive/v3/files/' + ID + '?alt=media*', r => r.fulfill({
+      status: 200, contentType: 'application/pdf', body: Buffer.from(PDF_B64, 'hex'),
+    }));
+
+    // permiso de Google ya concedido y guardado en el dispositivo
+    await p2.goto(URL + '#/docs', { waitUntil: 'networkidle' });
+    await p2.evaluate(async () => {
+      const db = await new Promise(res => {
+        const q = indexedDB.open('emma-planner', 1);
+        q.onupgradeneeded = () => q.result.createObjectStore('kv');
+        q.onsuccess = () => res(q.result);
+      });
+      const poner = (k, v) => new Promise(res => {
+        const t = db.transaction('kv', 'readwrite');
+        t.objectStore('kv').put(v, k);
+        t.oncomplete = res;
+      });
+      await poner('drive:token', { access_token: 'de-prueba', expira: Date.now() + 3600_000 });
+      await poner('ajustes', { driveClientId: 'de-prueba.apps.googleusercontent.com' });
+    });
+    await p2.reload({ waitUntil: 'networkidle' });
+
+    await p2.click('button:has-text("Traer documentos")');
+    await p2.waitForSelector('text=Manual de Gestión Comercial.pdf', { timeout: 40000 });
+    await p2.waitForSelector('text=/caracteres indexados/', { timeout: 40000 });
+
+    // y el texto que estaba adentro del PDF ahora se busca
+    await p2.fill('input[placeholder="Preguntá: ¿qué dice la Ficha de Rol sobre…?"]', 'margen cielorrasos');
+    await p2.click('button[aria-label="Buscar"]');
+    await p2.waitForSelector('mark:has-text("cielorrasos")', { timeout: 20000 });
+    const t = await p2.textContent('main');
+    if (!t.includes('38 por ciento')) throw new Error('no encontró el texto que estaba dentro del PDF');
+  } finally {
+    await ctx2.close();
   }
 });
 

@@ -27,6 +27,7 @@ const EXPORTABLES: Record<string, string> = {
   'application/vnd.google-apps.spreadsheet': 'text/csv',
 };
 const DESCARGABLES = ['text/plain', 'text/markdown', 'text/csv', 'application/json', 'text/html'];
+const PDF = 'application/pdf';
 
 interface ArchivoDrive {
   id: string; name: string; mimeType: string; modifiedTime: string;
@@ -152,9 +153,20 @@ export class Drive {
     return salida;
   }
 
-  esLeible(mime: string): boolean { return Boolean(EXPORTABLES[mime]) || DESCARGABLES.includes(mime); }
+  esLeible(mime: string): boolean {
+    return Boolean(EXPORTABLES[mime]) || DESCARGABLES.includes(mime) || mime === PDF;
+  }
 
   async texto(a: ArchivoDrive): Promise<string | null> {
+    if (a.mimeType === PDF) {
+      const datos = await (await this.#api(`${API}/files/${a.id}?alt=media&supportsAllDrives=true`)).arrayBuffer();
+      const { textoDePdf } = await import('./pdf');
+      const r = await textoDePdf(datos);
+      if (r.escaneado) {
+        throw new Error(`Es un PDF escaneado (${r.paginas} pág.): son imágenes, no texto.`);
+      }
+      return r.texto;
+    }
     const exportable = EXPORTABLES[a.mimeType];
     if (exportable) {
       return (await this.#api(`${API}/files/${a.id}/export?mimeType=${encodeURIComponent(exportable)}`)).text();
