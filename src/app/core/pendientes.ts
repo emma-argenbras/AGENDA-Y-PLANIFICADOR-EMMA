@@ -11,7 +11,13 @@
  */
 
 export type EstadoPendiente = 'abierto' | 'hecho' | 'delegado' | 'descartado';
-export type UnidadId = 'construccion' | 'papeleria' | 'lta' | 'transversal';
+
+/**
+ * Abierto a propósito: las unidades de negocio se editan desde la app
+ * (Configuración → Vos y las unidades) y la lista vigente sale de ahí, no de
+ * este archivo. 'transversal' siempre existe: es «toda la empresa».
+ */
+export type UnidadId = string;
 
 export interface Pendiente {
   id: string;
@@ -41,13 +47,6 @@ export interface PlanSemana {
   cerrado?: { fecha: string; nota: string };
 }
 
-export const UNIDADES: { id: UnidadId; nombre: string; corto: string }[] = [
-  { id: 'construccion', nombre: 'Construcción', corto: 'Constr.' },
-  { id: 'papeleria', nombre: 'Papelería / Higiene', corto: 'Higiene' },
-  { id: 'lta', nombre: 'LTA / Comex', corto: 'LTA' },
-  { id: 'transversal', nombre: 'Toda la empresa', corto: 'Empresa' },
-];
-
 /** Más de esto y la bandeja deja de ser una bandeja: es un cementerio. */
 export const TOPE_BANDEJA = 20;
 
@@ -63,24 +62,31 @@ export const abiertos = (ps: readonly Pendiente[]): Pendiente[] =>
 export const hayLugar = (ps: readonly Pendiente[]): boolean =>
   abiertos(ps).length < TOPE_BANDEJA;
 
-/** Días desde que entró o desde la última vez que fue prioridad. */
-export function diasQuieto(p: Pendiente, hoyISO: string): number {
-  const desde = p.ultimaVezPrioridad ?? new Date(p.creado).toISOString().slice(0, 10);
+/**
+ * Días desde que entró o desde la última vez que fue prioridad.
+ *
+ * `inicio` es la fecha desde la que la app cuenta: un pendiente que entró antes
+ * no arrastra esa antigüedad, porque si no, arrancar de cero te llenaría la
+ * bandeja de rojos el primer día.
+ */
+export function diasQuieto(p: Pendiente, hoyISO: string, inicio: string | null = null): number {
+  const propia = p.ultimaVezPrioridad ?? new Date(p.creado).toISOString().slice(0, 10);
+  const desde = inicio && propia < inicio ? inicio : propia;
   return Math.max(0, Math.round(
     (Date.parse(hoyISO + 'T00:00:00') - Date.parse(desde + 'T00:00:00')) / 86400000));
 }
 
-export const estancado = (p: Pendiente, hoyISO: string): boolean =>
-  p.estado === 'abierto' && diasQuieto(p, hoyISO) >= DIAS_PARA_DECIDIR;
+export const estancado = (p: Pendiente, hoyISO: string, inicio: string | null = null): boolean =>
+  p.estado === 'abierto' && diasQuieto(p, hoyISO, inicio) >= DIAS_PARA_DECIDIR;
 
 /**
  * Orden de la bandeja: primero lo que exige una decisión, después lo que
  * aporta a un objetivo de esta semana, y al final el resto por antigüedad.
  */
-export function ordenar(ps: readonly Pendiente[], hoyISO: string): Pendiente[] {
+export function ordenar(ps: readonly Pendiente[], hoyISO: string, inicio: string | null = null): Pendiente[] {
   return [...abiertos(ps)].sort((a, b) => {
-    const ea = estancado(a, hoyISO) ? 0 : 1;
-    const eb = estancado(b, hoyISO) ? 0 : 1;
+    const ea = estancado(a, hoyISO, inicio) ? 0 : 1;
+    const eb = estancado(b, hoyISO, inicio) ? 0 : 1;
     if (ea !== eb) return ea - eb;
     const oa = a.objetivoId ? 0 : 1;
     const ob = b.objetivoId ? 0 : 1;
@@ -97,11 +103,11 @@ export interface ResumenBandeja {
   llena: boolean;
 }
 
-export function resumen(ps: readonly Pendiente[], hoyISO: string): ResumenBandeja {
+export function resumen(ps: readonly Pendiente[], hoyISO: string, inicio: string | null = null): ResumenBandeja {
   const ab = abiertos(ps);
   return {
     abiertos: ab.length,
-    estancados: ab.filter(p => estancado(p, hoyISO)).length,
+    estancados: ab.filter(p => estancado(p, hoyISO, inicio)).length,
     conObjetivo: ab.filter(p => p.objetivoId).length,
     lugar: Math.max(0, TOPE_BANDEJA - ab.length),
     llena: ab.length >= TOPE_BANDEJA,

@@ -1,4 +1,17 @@
 @if (ajustes(); as a) {
+  <!-- ── Las reglas ─────────────────────────────────────────────────────── -->
+  <h2 class="seccion">Las reglas de la app</h2>
+  <div class="tarjeta">
+    <p class="chico" style="margin:0 0 4px">
+      Desde cuándo cuenta, quién es dueño de qué, los umbrales de los semáforos y las pruebas de
+      rol. Todo eso se edita acá adentro.
+    </p>
+    <p class="mini" style="margin:0 0 10px">
+      Acá abajo están las cosas del aparato: la nube, Drive, los avisos y el backup.
+    </p>
+    <a class="btn ancho" routerLink="/config">Abrir Configuración</a>
+  </div>
+
   <!-- ── Nube ───────────────────────────────────────────────────────────── -->
   <h2 class="seccion">Tus datos: {{ datos.modo() === 'nube' ? 'en la nube' : 'en este dispositivo' }}</h2>
   <div class="tarjeta">

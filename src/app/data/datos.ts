@@ -199,6 +199,11 @@ export class Datos {
   guardarDoc(id: string, texto: string) { return this.local.escribir(K.doc(id), texto); }
   borrarDoc(id: string) { return this.local.borrar(K.doc(id)); }
 
+  /* ── Configuración (las reglas editables) ──────────────────────────────── */
+
+  config<T>(): Promise<T | null> { return this.repo.leer<T>(K.config); }
+  guardarConfig<T>(c: T) { return this.escribir(K.config, c); }
+
   /* ── Ajustes ───────────────────────────────────────────────────────────── */
 
   async ajustes(): Promise<Ajustes> {
@@ -222,15 +227,36 @@ export class Datos {
   }
 
   /**
+   * Desde qué día cuenta la app.
+   *
+   * `primerUso` lo pone la app sola la primera vez que abrís. `inicio` lo
+   * ponés vos, y gana: sirve para arrancar de cero sin borrar nada, que es lo
+   * que hace falta cuando la app te reclama semanas que ocurrieron antes de
+   * que la usaras. Un reclamo por algo anterior al primer día es la forma más
+   * rápida de que dejes de mirar los avisos.
+   */
+  async desdeCuando(): Promise<string | null> {
+    const a = await this.ajustes();
+    return a.inicio ?? a.primerUso ?? null;
+  }
+
+  /** Empezar a contar desde hoy. No borra un solo dato: solo corre la línea. */
+  async arrancarHoy(): Promise<string> {
+    const hoy = hoyISO();
+    await this.guardarAjustes({ inicio: hoy });
+    return hoy;
+  }
+
+  /**
    * Días hábiles seguidos sin cierre de jornada, mirando hacia atrás.
-   * Nunca cuenta días anteriores al primer uso: sería inventar una deuda.
+   * Nunca cruza la fecha de arranque: sería inventar una deuda.
    */
   async rachaSinRegistro(desde: string): Promise<number> {
-    const { primerUso } = await this.ajustes();
+    const inicio = await this.desdeCuando();
     let racha = 0;
     let f = desde;
     for (let i = 0; i < 30; i++) {
-      if (primerUso && f < primerUso) break;
+      if (inicio && f < inicio) break;
       if (!esFinDeSemana(f)) {
         if (await this.checkin(f)) break;
         racha++;

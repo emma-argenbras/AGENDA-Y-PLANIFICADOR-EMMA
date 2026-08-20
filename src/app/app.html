@@ -16,10 +16,10 @@
   <nav class="menu" aria-label="Más pantallas">
     <a routerLink="/prueba" (click)="cerrarMenu()">
       <span class="fuerte">
-        Prueba de Luciana
+        {{ pruebaMenu().titulo }}
         @if (marcaMenu()) { <i class="punto-menu"></i> }
       </span>
-      <span class="mini">Revisiones de viernes y decisión del 05/09</span>
+      <span class="mini">{{ pruebaMenu().detalle }}</span>
     </a>
     <a routerLink="/delegar" (click)="cerrarMenu()">
       <span class="fuerte">Para delegar</span>
@@ -40,6 +40,10 @@
     <a routerLink="/reglas" (click)="cerrarMenu()">
       <span class="fuerte">Ficha de Rol</span>
       <span class="mini">Decisiones, tabla y reglas</span>
+    </a>
+    <a routerLink="/config" (click)="cerrarMenu()">
+      <span class="fuerte">Configuración</span>
+      <span class="mini">Desde cuándo cuenta, equipo, tabla y umbrales</span>
     </a>
     <a routerLink="/ajustes" (click)="cerrarMenu()">
       <span class="fuerte">Ajustes</span>

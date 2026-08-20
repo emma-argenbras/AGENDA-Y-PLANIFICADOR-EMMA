@@ -1,9 +1,18 @@
 /**
  * reglas.ts — Lógica de negocio de la Ficha de Rol (secciones 3.1 a 3.7 del brief).
  *
- * ESTO ES CÓDIGO, NO CONFIGURACIÓN.
- * No hay pantalla de ajustes que edite nada de este archivo. Si una regla cambia,
- * cambia acá, se commitea y queda versionada.
+ * ESTE ARCHIVO ES EL VALOR DE FÁBRICA.
+ * Es lo que la app sabe sin que nadie cargue nada: la Ficha de Rol tal como se
+ * escribió el 08/08/2026. La app arranca con esto y funciona con esto.
+ *
+ * Encima puede haber una capa de cambios hechos desde la propia app
+ * (core/config.ts). La realidad se mueve —alguien se va, un umbral cambia, una
+ * prueba termina— y esperar un commit para eso es esperar demasiado. Lo que se
+ * edita queda marcado como «tuyo» y se puede volver al original de acá.
+ *
+ * Regla de reparto: acá vive el CRITERIO (cómo se evalúa un umbral, qué hace
+ * que una fila sea forzada). Lo editable son los DATOS (los números, los
+ * nombres, quién es dueño de qué).
  *
  * Los colores son los ocho slots categóricos de la paleta validada (claro y
  * oscuro), asignados en orden fijo: el orden es el mecanismo que garantiza que
@@ -17,13 +26,32 @@ export type CategoriaId =
   | 'estudio' | 'estrategia' | 'reuniones' | 'equipo'
   | 'ventas' | 'marketing' | 'operativa' | 'personal';
 
-export type PersonaId =
-  | 'seba' | 'luciana' | 'leila' | 'potte' | 'jalo'
-  | 'sergio' | 'bruno' | 'comex' | 'comercial' | 'emma';
+/**
+ * Abierto a propósito: la dotación cambia y se pueden agregar personas desde
+ * la app. Los ids de fábrica son 'seba' | 'luciana' | 'leila' | 'potte' |
+ * 'jalo' | 'sergio' | 'bruno' | 'comex' | 'comercial' | 'emma'.
+ */
+export type PersonaId = string;
 
 export type Estado = 'verde' | 'amarillo' | 'rojo' | 'gris';
 
 export interface Persona { nombre: string; rol: string; alias: string[]; }
+
+/** La misma persona, con su id adentro: es la forma que edita la app. */
+export interface PersonaConId extends Persona { id: PersonaId; }
+
+export interface Unidad { id: string; nombre: string; detalle: string; corto: string; }
+
+export interface Perfil {
+  nombre: string;
+  roles: string[];
+  base: string;
+  unidades: Unidad[];
+}
+
+export interface ReglaSistema { id: string; titulo: string; texto: string; }
+
+export interface Vacante { puesto: string; desde: string; nota: string; }
 
 export interface Categoria {
   id: CategoriaId;
@@ -73,14 +101,14 @@ export interface Indicador {
   tipo: 'moneda' | 'entero';
 }
 
-export const PERFIL = {
+export const PERFIL: Perfil = {
   nombre: 'Emmanuel Van Breedam',
   roles: ['Director General — ArgenBras', 'Director — LTA World Trading'],
   base: 'Concordia, Entre Ríos, Argentina',
   unidades: [
-    { id: 'construccion', nombre: 'Construcción', detalle: 'Cielorrasos PVC, aislamientos termoacústicos' },
-    { id: 'papeleria', nombre: 'Papelería / Higiene', detalle: 'Doméstico e institucional' },
-    { id: 'lta', nombre: 'LTA / Comex', detalle: 'Comercio exterior' }
+    { id: 'construccion', nombre: 'Construcción', corto: 'Constr.', detalle: 'Cielorrasos PVC, aislamientos termoacústicos' },
+    { id: 'papeleria', nombre: 'Papelería / Higiene', corto: 'Higiene', detalle: 'Doméstico e institucional' },
+    { id: 'lta', nombre: 'LTA / Comex', corto: 'LTA', detalle: 'Comercio exterior' }
   ]
 };
 
@@ -99,7 +127,7 @@ export const PERSONAS: Record<PersonaId, Persona> = {
 };
 
 /** Vacantes y cambios de dotación vivos, para que la app no mienta. */
-export const DOTACION = {
+export const DOTACION: { vacantes: Vacante[] } = {
   vacantes: [
     {
       puesto: 'Comercial de Construcción',
@@ -217,75 +245,114 @@ export const DELEGACION: FilaDelegacion[] = [
 ];
 
 /* ────────────────────────────────────────────────────────────────────────────
- * 3.5 — Umbrales de control. Fijados ANTES de medir. No se ajustan post-hoc:
- * cambiar estos números requiere un commit, no un click.
- * Cada evaluador devuelve { estado: 'verde'|'amarillo'|'rojo'|'gris', texto }.
+ * 3.5 — Umbrales de control. Fijados ANTES de medir, que es lo que les da
+ * autoridad: un umbral que se corre después de ver el resultado no mide nada.
+ *
+ * Los NÚMEROS son editables desde la app (la realidad se mueve). El CRITERIO
+ * —qué se compara contra qué y qué color sale— vive acá y no se toca desde
+ * ninguna pantalla. Mover un número deja marca de que lo moviste vos.
  * ────────────────────────────────────────────────────────────────────────── */
-export const UMBRALES: Umbral[] = [
-  {
-    id: 'marketing',
-    titulo: 'Marketing',
-    regla: '>6 hs/sem = falta contratar a alguien. <3 hs/sem = no era un problema real.',
-    evaluar(t: TotalesSemana): ResultadoUmbral {
-      const h = t.porCategoria['marketing'] ?? 0;
-      if (t.total === 0) return { estado: 'gris', valor: h, texto: 'Sin registro esta semana.' };
-      if (h > 6) return { estado: 'rojo', valor: h, texto: `${fmtH(h)} en marketing: falta contratar a alguien para esto.` };
-      if (h < 3) return { estado: 'verde', valor: h, texto: `${fmtH(h)}: no era un problema real.` };
-      return { estado: 'amarillo', valor: h, texto: `${fmtH(h)}: zona de observación (3–6 hs).` };
+
+export interface NumerosUmbral {
+  /** Marketing: más de esto por semana = falta contratar a alguien. */
+  marketingAlto: number;
+  /** Marketing: menos de esto = no era un problema real. */
+  marketingBajo: number;
+  /** Operativa: a partir de estas horas ya es media jornada ajena. */
+  operativaHoras: number;
+  /** Operativa: repartida en estos días o más, es sostenido, no una excepción. */
+  operativaDias: number;
+  /** Venta + Estrategia: piso del rol de Director, en % del total semanal. */
+  rolPiso: number;
+  /** Debajo del piso pero encima de esto, es amarillo y no rojo. */
+  rolAviso: number;
+  /** Reuniones internas: lo que proyecta el manual, en horas por semana. */
+  reunionesProyectadas: number;
+  /** Hasta acá es amarillo; por encima, las reuniones se comieron la semana. */
+  reunionesTolerancia: number;
+}
+
+export const NUMEROS_UMBRAL: NumerosUmbral = {
+  marketingAlto: 6,
+  marketingBajo: 3,
+  operativaHoras: 2,
+  operativaDias: 3,
+  rolPiso: 40,
+  rolAviso: 30,
+  reunionesProyectadas: 16,
+  reunionesTolerancia: 20,
+};
+
+/** Los cuatro umbrales, armados con los números que estén vigentes. */
+export function construirUmbrales(n: NumerosUmbral = NUMEROS_UMBRAL): Umbral[] {
+  return [
+    {
+      id: 'marketing',
+      titulo: 'Marketing',
+      regla: `>${n.marketingAlto} hs/sem = falta contratar a alguien. <${n.marketingBajo} hs/sem = no era un problema real.`,
+      evaluar(t: TotalesSemana): ResultadoUmbral {
+        const h = t.porCategoria['marketing'] ?? 0;
+        if (t.total === 0) return { estado: 'gris', valor: h, texto: 'Sin registro esta semana.' };
+        if (h > n.marketingAlto) return { estado: 'rojo', valor: h, texto: `${fmtH(h)} en marketing: falta contratar a alguien para esto.` };
+        if (h < n.marketingBajo) return { estado: 'verde', valor: h, texto: `${fmtH(h)}: no era un problema real.` };
+        return { estado: 'amarillo', valor: h, texto: `${fmtH(h)}: zona de observación (${n.marketingBajo}–${n.marketingAlto} hs).` };
+      }
+    },
+    {
+      id: 'operativa',
+      titulo: 'Ejecución operativa',
+      regla: 'Cada hora acá es una hora que la Ficha de Rol dice que no debería existir. Cualquier valor >0 sostenido es una alerta.',
+      evaluar(t: TotalesSemana): ResultadoUmbral {
+        const h = t.porCategoria['operativa'] ?? 0;
+        const dias = t.diasConCategoria['operativa'] ?? 0;
+        if (t.total === 0) return { estado: 'gris', valor: h, texto: 'Sin registro esta semana.' };
+        if (h === 0) return { estado: 'verde', valor: 0, texto: 'Cero horas operativas. Así tiene que quedar.' };
+        if (dias >= n.operativaDias) return { estado: 'rojo', valor: h, texto: `${fmtH(h)} repartidas en ${dias} días: es sostenido, no una excepción. Hay tareas que no delegaste.` };
+        if (h >= n.operativaHoras) return {
+          estado: 'rojo', valor: h,
+          texto: dias > 1
+            ? `${fmtH(h)} en ${dias} días: media jornada haciendo lo que tiene otro dueño.`
+            : `${fmtH(h)} en un solo día: media jornada haciendo lo que tiene otro dueño.`,
+        };
+        return { estado: 'amarillo', valor: h, texto: `${fmtH(h)}: no debería existir ninguna. Mirá quién debía hacerlas.` };
+      }
+    },
+    {
+      id: 'rol_director',
+      titulo: 'Venta y clientes + Estrategia',
+      regla: `Si sumadas no llegan al ${n.rolPiso}% del total semanal, el rol de Director no se está ejerciendo.`,
+      evaluar(t: TotalesSemana): ResultadoUmbral {
+        const h = (t.porCategoria['ventas'] ?? 0) + (t.porCategoria['estrategia'] ?? 0);
+        if (t.total === 0) return { estado: 'gris', valor: 0, texto: 'Sin registro esta semana.' };
+        const pct = Math.round((h / t.total) * 100);
+        if (pct >= n.rolPiso) return { estado: 'verde', valor: pct, texto: `${pct}% del tiempo (${fmtH(h)}). El rol se está ejerciendo.` };
+        if (pct >= n.rolAviso) return { estado: 'amarillo', valor: pct, texto: `${pct}% — por debajo del ${n.rolPiso}% mínimo.` };
+        return { estado: 'rojo', valor: pct, texto: `${pct}%: el rol de Director no se está ejerciendo esta semana.` };
+      }
+    },
+    {
+      id: 'reuniones',
+      titulo: 'Reuniones internas',
+      regla: `El manual proyecta ${n.reunionesProyectadas} hs semanales. Comparar contra el real.`,
+      proyectado: n.reunionesProyectadas,
+      evaluar(t: TotalesSemana): ResultadoUmbral {
+        const h = t.porCategoria['reuniones'] ?? 0;
+        if (t.total === 0) return { estado: 'gris', valor: h, texto: 'Sin registro esta semana.' };
+        const d = h - n.reunionesProyectadas;
+        if (h <= n.reunionesProyectadas) return { estado: 'verde', valor: h, texto: `${fmtH(h)} vs ${n.reunionesProyectadas} hs proyectadas (${fmtH(Math.abs(d))} por debajo).` };
+        if (h <= n.reunionesTolerancia) return { estado: 'amarillo', valor: h, texto: `${fmtH(h)} vs ${n.reunionesProyectadas} proyectadas: ${fmtH(d)} de más.` };
+        return { estado: 'rojo', valor: h, texto: `${fmtH(h)} vs ${n.reunionesProyectadas} proyectadas: ${fmtH(d)} de más. Las reuniones se comieron la semana.` };
+      }
     }
-  },
-  {
-    id: 'operativa',
-    titulo: 'Ejecución operativa',
-    regla: 'Cada hora acá es una hora que la Ficha de Rol dice que no debería existir. Cualquier valor >0 sostenido es una alerta.',
-    evaluar(t: TotalesSemana): ResultadoUmbral {
-      const h = t.porCategoria['operativa'] ?? 0;
-      const dias = t.diasConCategoria['operativa'] ?? 0;
-      if (t.total === 0) return { estado: 'gris', valor: h, texto: 'Sin registro esta semana.' };
-      if (h === 0) return { estado: 'verde', valor: 0, texto: 'Cero horas operativas. Así tiene que quedar.' };
-      if (dias >= 3) return { estado: 'rojo', valor: h, texto: `${fmtH(h)} repartidas en ${dias} días: es sostenido, no una excepción. Hay tareas que no delegaste.` };
-      if (h >= 2) return {
-        estado: 'rojo', valor: h,
-        texto: dias > 1
-          ? `${fmtH(h)} en ${dias} días: media jornada haciendo lo que tiene otro dueño.`
-          : `${fmtH(h)} en un solo día: media jornada haciendo lo que tiene otro dueño.`,
-      };
-      return { estado: 'amarillo', valor: h, texto: `${fmtH(h)}: no debería existir ninguna. Mirá quién debía hacerlas.` };
-    }
-  },
-  {
-    id: 'rol_director',
-    titulo: 'Venta y clientes + Estrategia',
-    regla: 'Si sumadas no llegan al 40% del total semanal, el rol de Director no se está ejerciendo.',
-    evaluar(t: TotalesSemana): ResultadoUmbral {
-      const h = (t.porCategoria['ventas'] ?? 0) + (t.porCategoria['estrategia'] ?? 0);
-      if (t.total === 0) return { estado: 'gris', valor: 0, texto: 'Sin registro esta semana.' };
-      const pct = Math.round((h / t.total) * 100);
-      if (pct >= 40) return { estado: 'verde', valor: pct, texto: `${pct}% del tiempo (${fmtH(h)}). El rol se está ejerciendo.` };
-      if (pct >= 30) return { estado: 'amarillo', valor: pct, texto: `${pct}% — por debajo del 40% mínimo.` };
-      return { estado: 'rojo', valor: pct, texto: `${pct}%: el rol de Director no se está ejerciendo esta semana.` };
-    }
-  },
-  {
-    id: 'reuniones',
-    titulo: 'Reuniones internas',
-    regla: 'El manual proyecta 16 hs semanales. Comparar contra el real.',
-    proyectado: 16,
-    evaluar(t: TotalesSemana): ResultadoUmbral {
-      const h = t.porCategoria['reuniones'] ?? 0;
-      if (t.total === 0) return { estado: 'gris', valor: h, texto: 'Sin registro esta semana.' };
-      const d = h - 16;
-      if (h <= 16) return { estado: 'verde', valor: h, texto: `${fmtH(h)} vs 16 hs proyectadas (${fmtH(Math.abs(d))} por debajo).` };
-      if (h <= 20) return { estado: 'amarillo', valor: h, texto: `${fmtH(h)} vs 16 proyectadas: ${fmtH(d)} de más.` };
-      return { estado: 'rojo', valor: h, texto: `${fmtH(h)} vs 16 proyectadas: ${fmtH(d)} de más. Las reuniones se comieron la semana.` };
-    }
-  }
-];
+  ];
+}
+
+export const UMBRALES: Umbral[] = construirUmbrales();
 
 /* ────────────────────────────────────────────────────────────────────────────
  * 3.6 — Las 5 reglas que blindan el sistema.
  * ────────────────────────────────────────────────────────────────────────── */
-export const REGLAS_SISTEMA = [
+export const REGLAS_SISTEMA: ReglaSistema[] = [
   { id: 'un_nombre', titulo: 'Un solo nombre por tarea', texto: 'Si aparece más de un responsable, nadie es responsable.' },
   { id: 'acta_mismo_dia', titulo: 'Acta el mismo día', texto: 'Qué se decidió, quién lo hace, para cuándo. Sin acta, la reunión no cuenta.' },
   { id: 'criterios', titulo: 'Criterios escritos, no aprobación previa', texto: 'Criterios por área + revisión semanal por excepción.' },

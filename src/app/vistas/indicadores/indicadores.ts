@@ -8,7 +8,7 @@ import { Datos } from '../../data/datos';
 import { Avisos } from '../../ui/avisos';
 import { Dialogo } from '../../ui/dialogo';
 import { LineaTendencia, type PuntoTendencia } from '../../ui/graficos/linea-tendencia';
-import { INDICADORES } from '../../core/reglas';
+import { Configuracion } from '../../data/configuracion';
 import { hoyISO, mesLargo } from '../../core/fechas';
 import type { FilaIndicadores } from '../../core/modelo';
 
@@ -24,7 +24,8 @@ export class Indicadores {
   private readonly datos = inject(Datos);
   private readonly avisos = inject(Avisos);
 
-  protected readonly definiciones = INDICADORES;
+  private readonly cfg = inject(Configuracion);
+  protected readonly definiciones = computed(() => this.cfg.reglas().indicadores);
   protected readonly mesLargo = mesLargo;
   protected readonly mesActual = hoyISO().slice(0, 7);
 

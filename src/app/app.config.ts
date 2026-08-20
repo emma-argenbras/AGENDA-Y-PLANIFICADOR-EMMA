@@ -6,6 +6,7 @@ import { provideRouter, withHashLocation, withInMemoryScrolling } from '@angular
 import { provideServiceWorker } from '@angular/service-worker';
 import { routes } from './app.routes';
 import { Datos } from './data/datos';
+import { Configuracion } from './data/configuracion';
 import { Calendario } from './data/calendario';
 import { Drive } from './data/drive';
 import { inicioSemana, hoyISO, sumarDias } from './core/fechas';
@@ -29,6 +30,7 @@ export const appConfig: ApplicationConfig = {
       const tema = inject(Tema);
       const drive = inject(Drive);
       const calendario = inject(Calendario);
+      const cfg = inject(Configuracion);
       // Si volvemos de la pantalla de permisos de Google, el token viene en la
       // dirección: hay que levantarlo y limpiarla antes de que el router mire.
       await drive.recibirDeGoogle().catch(() => false);
@@ -36,6 +38,9 @@ export const appConfig: ApplicationConfig = {
       const ajustes = await datos.ajustes();
       tema.preferencia.set(ajustes.tema);
       await datos.marcarPrimerUso();
+      // Antes de que ninguna pantalla clasifique nada: si editó la tabla de
+      // delegación, el clasificador tiene que arrancar sabiéndolo.
+      await cfg.cargar();
       // Sin esperar: que el arranque no dependa de Google.
       const lunes = inicioSemana(hoyISO());
       setTimeout(() => void calendario.importarSiCorresponde(lunes, sumarDias(lunes, 6)), 3000);

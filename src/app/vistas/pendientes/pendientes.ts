@@ -19,7 +19,8 @@ import {
   DIAS_PARA_DECIDIR, MAX_OBJETIVOS, TOPE_BANDEJA, diasQuieto, estancado, hayLugar,
   ordenar, resumen, type Pendiente, type PlanSemana,
 } from '../../core/pendientes';
-import { DELEGACION, PERSONAS, type PersonaId } from '../../core/reglas';
+import type { PersonaId } from '../../core/reglas';
+import { Configuracion } from '../../data/configuracion';
 import { fechaCorta, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
 import type { Prioridad } from '../../core/modelo';
 
@@ -33,13 +34,18 @@ import type { Prioridad } from '../../core/modelo';
 export class Pendientes {
   private readonly datos = inject(Datos);
   private readonly avisos = inject(Avisos);
+  private readonly cfg = inject(Configuracion);
 
   protected readonly hoy = hoyISO();
   protected readonly TOPE = TOPE_BANDEJA;
   protected readonly DIAS = DIAS_PARA_DECIDIR;
   protected readonly MAX_OBJETIVOS = MAX_OBJETIVOS;
-  protected readonly duenos = DELEGACION.map(d => ({ id: d.dueno, nombre: PERSONAS[d.dueno].nombre }))
-    .filter((v, i, a) => a.findIndex(x => x.id === v.id) === i);
+  protected readonly duenos = computed(() => {
+    const { delegacion, personas } = this.cfg.reglas();
+    return delegacion
+      .map(d => ({ id: d.dueno, nombre: personas[d.dueno]?.nombre ?? d.dueno }))
+      .filter((v, i, a) => a.findIndex(x => x.id === v.id) === i);
+  });
 
   private readonly estado = resource({
     params: () => ({ v: this.datos.cambios() }),
@@ -48,24 +54,26 @@ export class Pendientes {
       plan: await this.datos.plan(inicioSemana(this.hoy)),
       prioridades: await this.datos.prioridades(this.hoy),
       eventos: await this.datos.eventosEntre(this.hoy, sumarDias(this.hoy, 7)),
+      inicio: await this.datos.desdeCuando(),
     }),
   });
 
   protected readonly todos = computed<Pendiente[]>(() => this.estado.value()?.pendientes ?? []);
   protected readonly plan = computed<PlanSemana | null>(() => this.estado.value()?.plan ?? null);
   protected readonly prioridadesHoy = computed(() => this.estado.value()?.prioridades ?? []);
-  protected readonly lista = computed(() => ordenar(this.todos(), this.hoy));
-  protected readonly resumen = computed(() => resumen(this.todos(), this.hoy));
+  protected readonly lista = computed(() => ordenar(this.todos(), this.hoy, this.inicio()));
+  protected readonly inicio = computed(() => this.estado.value()?.inicio ?? null);
+  protected readonly resumen = computed(() => resumen(this.todos(), this.hoy, this.inicio()));
   protected readonly cerrados = computed(() =>
     this.todos().filter(p => p.estado !== 'abierto').sort((a, b) => (b.cerrado ?? 0) - (a.cerrado ?? 0)));
 
   protected readonly objetivos = computed(() => this.plan()?.objetivos ?? []);
 
-  protected diasQuieto(p: Pendiente): number { return diasQuieto(p, this.hoy); }
+  protected diasQuieto(p: Pendiente): number { return diasQuieto(p, this.hoy, this.inicio()); }
 
   /** «hoy» / «1 día» / «12 días»: los plurales rotos se notan. */
   protected antiguedad(p: Pendiente): string {
-    const d = diasQuieto(p, this.hoy);
+    const d = diasQuieto(p, this.hoy, this.inicio());
     if (d === 0) return 'entró hoy';
     return d === 1 ? 'hace 1 día' : `hace ${d} días`;
   }
@@ -76,9 +84,9 @@ export class Pendientes {
     this.abierto.set(this.abierto() === id ? null : id);
   }
   protected verDetalle(p: Pendiente): boolean {
-    return this.abierto() === p.id || estancado(p, this.hoy);
+    return this.abierto() === p.id || estancado(p, this.hoy, this.inicio());
   }
-  protected estancado(p: Pendiente): boolean { return estancado(p, this.hoy); }
+  protected estancado(p: Pendiente): boolean { return estancado(p, this.hoy, this.inicio()); }
   /** Bloque de agenda reservado para este pendiente, si tiene uno. */
   protected bloque(p: Pendiente) {
     return (this.estado.value()?.eventos ?? []).find(e => e.pendienteId === p.id) ?? null;
@@ -171,16 +179,17 @@ export class Pendientes {
   protected async delegarA(dueno: PersonaId): Promise<void> {
     const p = this.delegando();
     if (!p) return;
+    const nombre = this.cfg.reglas().personas[dueno]?.nombre ?? dueno;
     await this.datos.agregarDerivaciones([{
       id: crypto.randomUUID(), texto: p.texto, dueno,
-      duenoNombre: PERSONAS[dueno].nombre, tarea: 'Delegado desde pendientes',
+      duenoNombre: nombre, tarea: 'Delegado desde pendientes',
       fecha: this.hoy, origen: 'prioridad', avisado: false, creado: Date.now(),
     }]);
     await this.datos.actualizarPendiente(p.id, {
-      estado: 'delegado', cerrado: Date.now(), motivo: PERSONAS[dueno].nombre,
+      estado: 'delegado', cerrado: Date.now(), motivo: nombre,
     });
     this.delegando.set(null);
-    this.avisos.mostrar(`Pasó a ${PERSONAS[dueno].nombre.split(' ')[0]}.`);
+    this.avisos.mostrar(`Pasó a ${nombre.split(' ')[0]}.`);
   }
 
   protected readonly matando = signal<Pendiente | null>(null);

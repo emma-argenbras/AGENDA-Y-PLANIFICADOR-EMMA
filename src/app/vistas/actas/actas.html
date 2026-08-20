@@ -91,7 +91,7 @@
 <app-dialogo [abierto]="!!editando()" [titulo]="'Acta — ' + (editando()?.titulo ?? '')"
              (cerrar)="editando.set(null)">
   <datalist id="personas">
-    @for (p of personas; track p) { <option [value]="p"></option> }
+    @for (p of personas(); track p) { <option [value]="p"></option> }
   </datalist>
 
   @for (d of decisiones(); track $index) {

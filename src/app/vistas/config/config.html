@@ -1,0 +1,423 @@
+<!-- ── Desde cuándo cuenta la app ───────────────────────────────────────── -->
+<div class="tarjeta arranque">
+  <h2>Desde cuándo cuenta</h2>
+  @if (cuentaDesde(); as d) {
+    <p class="chico" style="margin:0 0 4px">
+      La app cuenta desde el <span class="fuerte">{{ fechaLarga(d) }}</span>.
+    </p>
+  } @else {
+    <p class="chico" style="margin:0 0 4px">Todavía no hay fecha de arranque.</p>
+  }
+  <p class="mini" style="margin:0 0 12px">
+    Nada anterior a esa fecha te va a reclamar nada: ni días sin cierre, ni revisiones sin
+    registrar. Lo que pasó antes de que empezaras a usar esto no es una deuda tuya.
+  </p>
+
+  <button class="btn primario ancho" type="button" (click)="confirmandoArranque.set(true)">
+    Empezar a contar desde hoy
+  </button>
+
+  <label class="campo" style="margin:12px 0 0">
+    <span>O elegí otra fecha</span>
+    <input type="date" [value]="inicio() ?? ''" (change)="fijarInicio(txt($event))">
+  </label>
+  @if (inicio()) {
+    <button class="btn fantasma chico" type="button" (click)="borrarInicio()">
+      Volver al primer día que abriste la app
+    </button>
+  }
+</div>
+
+<!-- ── Las reglas ───────────────────────────────────────────────────────── -->
+<h2 class="seccion">Las reglas que usa la app</h2>
+<p class="mini explica">
+  Todo esto viene escrito en la app y funciona sin que toques nada. Lo que edites acá queda
+  marcado como tuyo y se puede volver al original cuando quieras. Los datos de tu día a día
+  —cierres, pendientes, agenda— no se tocan.
+  <a routerLink="/reglas">Ver la Ficha de Rol completa</a>
+</p>
+
+@for (s of secciones; track s.id) {
+  <div class="tarjeta seccion-cfg" [attr.data-seccion]="s.id" [class.abierta]="abierta() === s.id">
+    <button class="cabecera" type="button" (click)="alternar(s.id)"
+            [attr.aria-expanded]="abierta() === s.id">
+      <span class="crece">
+        <span class="fuerte">{{ s.titulo }}</span>
+        <span class="mini">{{ s.resumen }}</span>
+      </span>
+      @if (editada(s.id); as f) {
+        <span class="marca" [title]="'Lo cambiaste el ' + fechaCorta(f)">tuyo</span>
+      } @else {
+        <span class="marca fabrica">de fábrica</span>
+      }
+      <span class="flecha">{{ abierta() === s.id ? '⌃' : '⌄' }}</span>
+    </button>
+
+    @if (abierta() === s.id) {
+      <div class="cuerpo">
+
+        <!-- ── Perfil ───────────────────────────────────────────────────── -->
+        @switch (s.id) {
+          @case ('perfil') {
+            <label class="campo">
+              <span>Tu nombre</span>
+              <input type="text" [value]="bPerfil().nombre"
+                     (input)="bPerfil.set({ ...bPerfil(), nombre: txt($event) })">
+            </label>
+            <label class="campo">
+              <span>Tus roles (uno por línea)</span>
+              <textarea [value]="lineas(bPerfil().roles)"
+                        (input)="bPerfil.set({ ...bPerfil(), roles: deLineas(txt($event)) })"></textarea>
+            </label>
+            <label class="campo">
+              <span>Dónde estás</span>
+              <input type="text" [value]="bPerfil().base"
+                     (input)="bPerfil.set({ ...bPerfil(), base: txt($event) })">
+            </label>
+
+            <h3>Unidades de negocio</h3>
+            <p class="mini">Son las que podés elegir al armar los 3 objetivos de la semana.</p>
+            @for (u of bPerfil().unidades; track u.id; let i = $index) {
+              <div class="item">
+                <div class="dos">
+                  <input type="text" placeholder="Nombre" [value]="u.nombre"
+                         (input)="bPerfil.set({ ...bPerfil(), unidades: bPerfil().unidades.slice(0, i).concat([{ ...u, nombre: txt($event) }], bPerfil().unidades.slice(i + 1)) })">
+                  <input type="text" placeholder="Corto" [value]="u.corto"
+                         (input)="bPerfil.set({ ...bPerfil(), unidades: bPerfil().unidades.slice(0, i).concat([{ ...u, corto: txt($event) }], bPerfil().unidades.slice(i + 1)) })">
+                </div>
+                <input type="text" placeholder="Qué es" [value]="u.detalle"
+                       (input)="bPerfil.set({ ...bPerfil(), unidades: bPerfil().unidades.slice(0, i).concat([{ ...u, detalle: txt($event) }], bPerfil().unidades.slice(i + 1)) })">
+                <button class="btn fantasma chico" type="button" (click)="quitarUnidad(i)">Quitar</button>
+              </div>
+            }
+            <button class="btn chico" type="button" (click)="agregarUnidad()">+ Unidad</button>
+          }
+
+          <!-- ── Personas ───────────────────────────────────────────────── -->
+          @case ('personas') {
+            <p class="mini">
+              Los alias son con los que escribís a esa persona en un acta o en el cierre del día.
+              Cuantos más pongas, mejor la reconoce.
+            </p>
+            @for (p of bPersonas(); track p.id; let i = $index) {
+              <div class="item" [attr.data-persona]="p.id">
+                <input type="text" placeholder="Nombre y apellido" [value]="p.nombre"
+                       (input)="editar(bPersonas, i, { nombre: txt($event) })">
+                <input type="text" placeholder="Qué hace" [value]="p.rol"
+                       (input)="editar(bPersonas, i, { rol: txt($event) })">
+                <input type="text" placeholder="Alias, separados por coma" [value]="comas(p.alias)"
+                       (input)="editar(bPersonas, i, { alias: deComas(txt($event)) })">
+                <button class="btn fantasma chico" type="button" (click)="quitarPersona(i)">Quitar</button>
+              </div>
+            }
+            <button class="btn chico" type="button" (click)="agregarPersona()">+ Persona</button>
+          }
+
+          <!-- ── Delegación ─────────────────────────────────────────────── -->
+          @case ('delegacion') {
+            <p class="mini">
+              Un solo dueño por tarea. Es la tabla que frena tus prioridades: si escribís algo
+              que está acá, la app no te deja ponerlo como tuyo.
+            </p>
+            @for (f of bDelegacion(); track f.id; let i = $index) {
+              <div class="item" [attr.data-fila]="f.id">
+                <input type="text" placeholder="Tarea" [value]="f.tarea"
+                       (input)="editar(bDelegacion, i, { tarea: txt($event) })">
+                <div class="dos">
+                  <select data-campo="dueno" [value]="f.dueno"
+                          (change)="editar(bDelegacion, i, { dueno: txt($event) })">
+                    @for (p of personasParaElegir(); track p.id) {
+                      <option [value]="p.id" [selected]="p.id === f.dueno">{{ p.nombre }}</option>
+                    }
+                  </select>
+                  @if (f.forzada) {
+                    <div class="clavada" title="Regla 3.3">🔒 Ejecución operativa</div>
+                  } @else {
+                    <select data-campo="categoria" [value]="f.categoria"
+                            (change)="editar(bDelegacion, i, { categoria: $any(txt($event)) })">
+                      @for (c of catsFabrica; track c.id) {
+                        <option [value]="c.id" [selected]="c.id === f.categoria">{{ c.nombre }}</option>
+                      }
+                    </select>
+                  }
+                </div>
+                <input type="text" placeholder="Excepción (opcional)" [value]="f.excepcion ?? ''"
+                       (input)="editar(bDelegacion, i, { excepcion: txt($event) })">
+                <input type="text" placeholder="Cómo lo escribís, separado por coma" [value]="comas(f.pistas)"
+                       (input)="editar(bDelegacion, i, { pistas: deComas(txt($event)) })">
+                <button class="btn fantasma chico" type="button" (click)="quitar(bDelegacion, i)">Quitar</button>
+              </div>
+            }
+            <button class="btn chico" type="button" (click)="agregarFila()">+ Tarea</button>
+            <p class="mini candado">
+              🔒 Las tareas con candado cuentan siempre como Ejecución operativa. Es la regla 3.3
+              y no se puede apagar: son justo las que uno se convence de que «esta vez sí» eran
+              estratégicas. El dueño sí se puede cambiar.
+            </p>
+          }
+
+          <!-- ── Decisiones propias ─────────────────────────────────────── -->
+          @case ('decisiones') {
+            <p class="mini">Lo que está acá la app nunca lo va a marcar como delegable.</p>
+            @for (d of bDecisiones(); track d.id; let i = $index) {
+              <div class="item">
+                <input type="text" placeholder="La decisión" [value]="d.texto"
+                       (input)="editar(bDecisiones, i, { texto: txt($event) })">
+                <input type="text" placeholder="Cómo la escribís, separado por coma" [value]="comas(d.pistas)"
+                       (input)="editar(bDecisiones, i, { pistas: deComas(txt($event)) })">
+                <button class="btn fantasma chico" type="button" (click)="quitar(bDecisiones, i)">Quitar</button>
+              </div>
+            }
+            <button class="btn chico" type="button" (click)="agregarDecision()">+ Decisión</button>
+          }
+
+          <!-- ── Categorías ─────────────────────────────────────────────── -->
+          @case ('categorias') {
+            <p class="mini">
+              Son ocho y son siempre estas ocho, en este orden: el color de cada una está
+              elegido para que dos categorías vecinas de un gráfico se distingan aunque no
+              distingas bien los colores. Se cambia el nombre y qué entra, no la paleta.
+            </p>
+            @for (c of bCategorias(); track c.id; let i = $index) {
+              <div class="item" [attr.data-categoria]="c.id">
+                <input type="text" [value]="c.nombre"
+                       (input)="editar(bCategorias, i, { nombre: txt($event) })">
+                <input type="text" placeholder="Qué entra acá" [value]="c.definicion"
+                       (input)="editar(bCategorias, i, { definicion: txt($event) })">
+                <input type="text" placeholder="Cómo lo escribís, separado por coma" [value]="comas(c.pistas)"
+                       (input)="editar(bCategorias, i, { pistas: deComas(txt($event)) })">
+              </div>
+            }
+          }
+
+          <!-- ── Umbrales ───────────────────────────────────────────────── -->
+          @case ('umbrales') {
+            @if (bUmbrales(); as n) {
+              <p class="mini">
+                Un umbral se fija antes de medir. Si lo movés después de ver el resultado deja de
+                medir algo: por eso conviene cambiarlos un lunes y no un viernes.
+              </p>
+
+              <h3>Marketing</h3>
+              <div class="dos">
+                <label class="campo"><span>Más de estas horas: falta contratar</span>
+                  <input type="number" min="0" step="0.5" [value]="n.marketingAlto"
+                         (input)="bUmbrales.set({ ...n, marketingAlto: num($event) })"></label>
+                <label class="campo"><span>Menos de estas: no era un problema</span>
+                  <input type="number" min="0" step="0.5" [value]="n.marketingBajo"
+                         (input)="bUmbrales.set({ ...n, marketingBajo: num($event) })"></label>
+              </div>
+
+              <h3>Ejecución operativa</h3>
+              <div class="dos">
+                <label class="campo"><span>Horas que ya son media jornada ajena</span>
+                  <input type="number" min="0" step="0.5" [value]="n.operativaHoras"
+                         (input)="bUmbrales.set({ ...n, operativaHoras: num($event) })"></label>
+                <label class="campo"><span>Días repartidos = es sostenido</span>
+                  <input type="number" min="1" step="1" [value]="n.operativaDias"
+                         (input)="bUmbrales.set({ ...n, operativaDias: num($event) })"></label>
+              </div>
+
+              <h3>Venta + Estrategia (el rol)</h3>
+              <div class="dos">
+                <label class="campo"><span>Piso, en % de la semana</span>
+                  <input type="number" min="0" max="100" step="1" [value]="n.rolPiso"
+                         (input)="bUmbrales.set({ ...n, rolPiso: num($event) })"></label>
+                <label class="campo"><span>Debajo de esto ya es rojo</span>
+                  <input type="number" min="0" max="100" step="1" [value]="n.rolAviso"
+                         (input)="bUmbrales.set({ ...n, rolAviso: num($event) })"></label>
+              </div>
+
+              <h3>Reuniones internas</h3>
+              <div class="dos">
+                <label class="campo"><span>Horas que proyecta el manual</span>
+                  <input type="number" min="0" step="0.5" [value]="n.reunionesProyectadas"
+                         (input)="bUmbrales.set({ ...n, reunionesProyectadas: num($event) })"></label>
+                <label class="campo"><span>Hasta acá es amarillo</span>
+                  <input type="number" min="0" step="0.5" [value]="n.reunionesTolerancia"
+                         (input)="bUmbrales.set({ ...n, reunionesTolerancia: num($event) })"></label>
+              </div>
+            }
+          }
+
+          <!-- ── Reglas del sistema ─────────────────────────────────────── -->
+          @case ('reglas') {
+            @for (r of bReglas(); track r.id; let i = $index) {
+              <div class="item">
+                <input type="text" placeholder="La regla, en pocas palabras" [value]="r.titulo"
+                       (input)="editar(bReglas, i, { titulo: txt($event) })">
+                <input type="text" placeholder="Por qué" [value]="r.texto"
+                       (input)="editar(bReglas, i, { texto: txt($event) })">
+                <div class="btn-fila">
+                  <button class="btn fantasma chico" type="button" (click)="mover(bReglas, i, -1)">↑</button>
+                  <button class="btn fantasma chico" type="button" (click)="mover(bReglas, i, 1)">↓</button>
+                  <button class="btn fantasma chico" type="button" (click)="quitar(bReglas, i)">Quitar</button>
+                </div>
+              </div>
+            }
+            <button class="btn chico" type="button" (click)="agregarRegla()">+ Regla</button>
+          }
+
+          <!-- ── Indicadores ────────────────────────────────────────────── -->
+          @case ('indicadores') {
+            <p class="mini">
+              Son tres y son estos tres. Se puede cambiar cómo se llaman y la aclaración; que
+              sean tres y no diez es la mitad del valor que tienen.
+            </p>
+            @for (ind of bIndicadores(); track ind.id; let i = $index) {
+              <div class="item">
+                <input type="text" [value]="ind.titulo"
+                       (input)="editar(bIndicadores, i, { titulo: txt($event) })">
+                <div class="dos">
+                  <input type="text" placeholder="Unidad" [value]="ind.unidad"
+                         (input)="editar(bIndicadores, i, { unidad: txt($event) })">
+                  <input type="text" placeholder="Aclaración" [value]="ind.aclaracion"
+                         (input)="editar(bIndicadores, i, { aclaracion: txt($event) })">
+                </div>
+              </div>
+            }
+          }
+
+          <!-- ── Pruebas de rol ─────────────────────────────────────────── -->
+          @case ('pruebas') {
+            <p class="mini">
+              Una prueba de rol es una persona, un encargo escrito, revisiones con fecha y un día
+              en el que se decide. Cambiar las fechas de inicio y fin recalcula los viernes solo.
+            </p>
+            @for (p of bPruebas(); track p.id; let i = $index) {
+              <div class="item prueba" [attr.data-prueba]="p.id">
+                <input type="text" placeholder="Quién" [value]="p.persona"
+                       (input)="editarPrueba(i, { persona: txt($event) })">
+                <div class="tres">
+                  <label class="campo"><span>Empieza</span>
+                    <input type="date" [value]="p.inicio" (change)="rango(i, 'inicio', txt($event))"></label>
+                  <label class="campo"><span>Termina</span>
+                    <input type="date" [value]="p.fin" (change)="rango(i, 'fin', txt($event))"></label>
+                  <label class="campo"><span>Se decide</span>
+                    <input type="date" [value]="p.decision" (change)="editarPrueba(i, { decision: txt($event) })"></label>
+                </div>
+
+                <p class="mini">
+                  Revisiones: {{ p.revisiones.length }}
+                  @if (p.revisiones.length) {
+                    — @for (r of p.revisiones; track r) { <span class="fecha">{{ fechaCorta(r) }}</span> }
+                  }
+                </p>
+
+                <label class="campo"><span>Qué se le encarga (uno por línea)</span>
+                  <textarea [value]="lineas(p.encargo)"
+                            (input)="editarPrueba(i, { encargo: deLineas(txt($event)) })"></textarea></label>
+                <label class="campo"><span>Qué NO hace (uno por línea)</span>
+                  <textarea [value]="lineas(p.noHace)"
+                            (input)="editarPrueba(i, { noHace: deLineas(txt($event)) })"></textarea></label>
+
+                <h3>Señales de cada revisión</h3>
+                @for (sn of p.senales; track sn.id; let j = $index) {
+                  <div class="senal">
+                    <input type="text" placeholder="La pregunta" [value]="sn.pregunta"
+                           (input)="editarSenal(i, j, { pregunta: txt($event) })">
+                    <div class="dos">
+                      <select [value]="sn.tipo" (change)="editarSenal(i, j, { tipo: $any(txt($event)) })">
+                        @for (t of TIPOS_SENAL; track t.id) {
+                          <option [value]="t.id" [selected]="t.id === sn.tipo">{{ t.nombre }}</option>
+                        }
+                      </select>
+                      @if (sn.tipo === 'opcion') {
+                        <input type="text" placeholder="Opciones, separadas por coma"
+                               [value]="comas(sn.opciones ?? [])"
+                               (input)="editarSenal(i, j, { opciones: deComas(txt($event)) })">
+                      } @else if (sn.tipo === 'num') {
+                        <input type="number" placeholder="Objetivo" [value]="sn.objetivo ?? 0"
+                               (input)="editarSenal(i, j, { objetivo: num($event) })">
+                      } @else {
+                        <div class="clavada">Se responde sí o no</div>
+                      }
+                    </div>
+                    <button class="btn fantasma chico" type="button" (click)="quitarSenal(i, j)">Quitar señal</button>
+                  </div>
+                }
+                <button class="btn chico" type="button" (click)="agregarSenal(i)">+ Señal</button>
+
+                <h3>Salidas posibles</h3>
+                @for (sa of p.salidas; track sa.id; let j = $index) {
+                  <div class="senal">
+                    <input type="text" placeholder="Título de la salida" [value]="sa.titulo"
+                           (input)="editarSalida(i, j, { titulo: txt($event) })">
+                    <input type="text" placeholder="Detalle" [value]="sa.detalle"
+                           (input)="editarSalida(i, j, { detalle: txt($event) })">
+                    <button class="btn fantasma chico" type="button" (click)="quitarSalida(i, j)">Quitar salida</button>
+                  </div>
+                }
+                <button class="btn chico" type="button" (click)="agregarSalida(i)">+ Salida</button>
+
+                <button class="btn fantasma chico borrar-prueba" type="button" (click)="quitar(bPruebas, i)">
+                  Borrar la prueba de {{ p.persona || 'esta persona' }}
+                </button>
+              </div>
+            }
+            <button class="btn chico" type="button" (click)="agregarPrueba()">+ Poner a alguien a prueba</button>
+          }
+
+          <!-- ── Vacantes ───────────────────────────────────────────────── -->
+          @case ('dotacion') {
+            <p class="mini">Un puesto vacante cambia lo que podés esperar del equipo. Que esté escrito evita discutirlo dos veces.</p>
+            @for (v of bDotacion(); track $index; let i = $index) {
+              <div class="item">
+                <input type="text" placeholder="Puesto" [value]="v.puesto"
+                       (input)="editar(bDotacion, i, { puesto: txt($event) })">
+                <label class="campo"><span>Desde</span>
+                  <input type="date" [value]="v.desde" (change)="editar(bDotacion, i, { desde: txt($event) })"></label>
+                <input type="text" placeholder="Qué pasó" [value]="v.nota"
+                       (input)="editar(bDotacion, i, { nota: txt($event) })">
+                <button class="btn fantasma chico" type="button" (click)="quitar(bDotacion, i)">Quitar</button>
+              </div>
+            }
+            <button class="btn chico" type="button" (click)="agregarVacante()">+ Vacante</button>
+          }
+        }
+
+        <div class="acciones">
+          <button class="btn primario" type="button" [disabled]="guardando()" (click)="guardar(s.id)">Guardar</button>
+          <button class="btn fantasma" type="button" (click)="cancelar()">Cancelar</button>
+          @if (editada(s.id)) {
+            <button class="btn fantasma" type="button" (click)="restaurando.set(s.id)">Volver al original</button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}
+
+@if (cfg.hayCambios()) {
+  <div class="tarjeta" style="margin-top:18px">
+    <p class="chico" style="margin:0 0 10px">
+      Hay secciones editadas. Se puede volver a dejar todo como venía de fábrica; tus cierres,
+      pendientes, actas y agenda no se tocan.
+    </p>
+    <button class="btn peligro ancho" type="button" (click)="restaurando.set('todo')">
+      Volver todas las reglas al original
+    </button>
+  </div>
+}
+
+<app-dialogo [abierto]="confirmandoArranque()" titulo="Empezar a contar desde hoy"
+             (cerrar)="confirmandoArranque.set(false)">
+  <p class="chico">
+    A partir de ahora la app cuenta desde el <span class="fuerte">{{ fechaLarga(hoy) }}</span>.
+    Deja de reclamarte días y revisiones anteriores a hoy.
+  </p>
+  <p class="mini">No se borra ningún dato: lo que ya cargaste sigue estando.</p>
+  <button pie class="btn primario" type="button" (click)="arrancarHoy()">Sí, arrancar hoy</button>
+  <button pie class="btn fantasma" type="button" (click)="confirmandoArranque.set(false)">Cancelar</button>
+</app-dialogo>
+
+<app-dialogo [abierto]="restaurando() !== null" titulo="Volver al original"
+             (cerrar)="restaurando.set(null)">
+  <p class="chico">
+    Se descarta lo que editaste en <span class="fuerte">{{ tituloDe(restaurando()) }}</span> y vuelve
+    a valer lo que trae la app.
+  </p>
+  <p class="mini">Tus cierres, pendientes, actas y agenda no se tocan.</p>
+  <button pie class="btn peligro" type="button" (click)="confirmarRestaurar()">Volver al original</button>
+  <button pie class="btn fantasma" type="button" (click)="restaurando.set(null)">Cancelar</button>
+</app-dialogo>

@@ -296,7 +296,7 @@
         } @else {
           @if (!s.categoria) { <p class="mini" style="margin:0 0 6px">No pude clasificarlo. Elegí una:</p> }
           <div class="chips">
-            @for (c of categorias; track c.id) {
+            @for (c of categorias(); track c.id) {
               <button class="chip" type="button" [class.activo]="s.categoria === c.id"
                       (click)="elegirCategoria(s, c.id)">{{ c.nombre }}</button>
             }

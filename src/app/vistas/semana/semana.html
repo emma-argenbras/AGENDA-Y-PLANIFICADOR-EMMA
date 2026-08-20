@@ -53,7 +53,7 @@
       <button class="btn primario" type="button" (click)="agregarObjetivo()" aria-label="Agregar">+</button>
     </div>
     <div class="chips" style="margin-top:10px">
-      @for (u of unidades; track u.id) {
+      @for (u of unidades(); track u.id) {
         <button class="chip" type="button" [class.activo]="unidadNueva() === u.id"
                 (click)="unidadNueva.set(u.id)">{{ u.nombre }}</button>
       }

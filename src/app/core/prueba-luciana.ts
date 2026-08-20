@@ -1,9 +1,11 @@
 /**
- * prueba-luciana.ts — Sección 4 del brief: la situación viva que hay que
- * trackear ahora mismo. Igual que rules.js: esto es código versionado, no una
- * pantalla de configuración.
+ * prueba-luciana.ts — Sección 4 del brief: la primera prueba de rol.
  *
  * Prueba de 4 semanas: 10/08/2026 → 04/09/2026. Decisión el 05/09 en Directorio.
+ *
+ * Es el valor de fábrica. Las fechas de una prueba son lo primero que se pone
+ * viejo, así que se pueden editar desde la app (Configuración → Pruebas de
+ * rol) sin esperar un commit.
  */
 
 export type TipoSenal = 'bool' | 'num' | 'opcion';
@@ -29,7 +31,39 @@ export type RegistrosPrueba = Record<string, RegistroRevision | undefined> & {
   __cierre?: { salida: string; titulo: string; nota: string; fecha: string };
 };
 
-export const PRUEBA = {
+export interface SalidaPrueba { id: string; titulo: string; detalle: string; }
+
+export interface PendientePrueba { id: string; texto: string; recomendado: string; nota: string; }
+
+/**
+ * La forma de una prueba de rol. Encargo, límites, revisiones con fecha,
+ * señales y las salidas posibles: sin las cinco cosas, no es una prueba, es
+ * una expectativa.
+ */
+export interface PruebaDeRol {
+  id: string;
+  persona: string;
+  inicio: string;
+  fin: string;
+  decision: string;
+  decisionDonde: string;
+  encargo: string[];
+  noHace: string[];
+  /** Revisiones de 15 min, todos los viernes. */
+  revisiones: string[];
+  duracionRevision: number;
+  /** Regla explícita del acuerdo. La app la hace visible, no la suaviza. */
+  reglaCancelacion: string;
+  /** Señales a registrar en CADA revisión. */
+  senales: Senal[];
+  objetivoMejoras: number;
+  /** Las salidas posibles el día de la decisión. Se elige una, no se inventa otra. */
+  salidas: SalidaPrueba[];
+  /** Pendientes sin resolver, con la recomendación explícita. */
+  pendientes: PendientePrueba[];
+}
+
+export const PRUEBA: PruebaDeRol = {
   id: 'luciana_2026_08',
   persona: 'Luciana Dalzotto',
   inicio: '2026-08-10',
@@ -52,7 +86,7 @@ export const PRUEBA = {
   ],
 
   /** Revisiones de 15 min, todos los viernes. */
-  revisiones: ['2026-08-14', '2026-08-21', '2026-08-28', '2026-09-04'] as string[],
+  revisiones: ['2026-08-14', '2026-08-21', '2026-08-28', '2026-09-04'],
   duracionRevision: 15,
 
   /** Regla explícita del acuerdo. La app la hace visible, no la suaviza. */
@@ -72,7 +106,7 @@ export const PRUEBA = {
       ayuda: 'Objetivo acumulado: 4 en 4 semanas.' },
     { id: 'permisos',  tipo: 'opcion', pregunta: '¿Pide permiso para cosas que puede decidir sola?',
       opciones: ['No, decide', 'Sí, pide permiso'], bueno: 'No, decide' }
-  ] as Senal[],
+  ],
 
   objetivoMejoras: 4,
 
@@ -94,15 +128,29 @@ export const PRUEBA = {
   ]
 };
 
+export type EstadoRevision = 'hecha' | 'vencida' | 'hoy' | 'pendiente' | 'previa';
+
 /**
  * Estado de la prueba según la fecha de hoy y lo registrado.
  * Nunca devuelve vacío: si no hay datos, dice exactamente eso.
+ *
+ * `inicio` es la fecha desde la que la app cuenta. Una revisión anterior a esa
+ * fecha queda 'previa': no se registró y no se va a registrar, pero tampoco es
+ * una deuda tuya —pasó antes de que empezaras a usar esto—. Reclamar por algo
+ * que ocurrió antes del primer día es la forma más rápida de que dejes de
+ * mirar los avisos.
  */
-export function estadoPrueba(hoyISO: string, registros: RegistrosPrueba = {}, prueba = PRUEBA) {
+export function estadoPrueba(
+  hoyISO: string,
+  registros: RegistrosPrueba = {},
+  prueba: PruebaDeRol = PRUEBA,
+  inicio: string | null = null,
+) {
   const revisiones = prueba.revisiones.map(fecha => {
     const reg = registros[fecha];
-    let estado: 'hecha' | 'vencida' | 'hoy' | 'pendiente';
+    let estado: EstadoRevision;
     if (reg) estado = 'hecha';
+    else if (inicio && fecha < inicio) estado = 'previa';
     else if (fecha < hoyISO) estado = 'vencida';
     else if (fecha === hoyISO) estado = 'hoy';
     else estado = 'pendiente';
@@ -125,6 +173,7 @@ export function estadoPrueba(hoyISO: string, registros: RegistrosPrueba = {}, pr
 
   return {
     revisiones,
+    previas: revisiones.filter(r => r.estado === 'previa').length,
     hechas: hechas.length,
     vencidas: vencidas.length,
     mejoras,

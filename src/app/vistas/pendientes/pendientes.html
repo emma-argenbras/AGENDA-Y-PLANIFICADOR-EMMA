@@ -166,7 +166,7 @@
              bajada="Va a aparecer en Para delegar, listo para la próxima vez que hablen."
              (cerrar)="delegando.set(null)">
   <div class="chips">
-    @for (d of duenos; track d.id) {
+    @for (d of duenos(); track d.id) {
       <button class="chip" type="button" (click)="delegarA(d.id)">{{ d.nombre }}</button>
     }
   </div>

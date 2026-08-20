@@ -34,6 +34,7 @@ export const K = {
   prueba: (id: string) => `prueba:${id}`,
   indicadores: 'indicadores',
   ajustes: 'ajustes',
+  config: 'config',
   docsIndice: 'docs:indice',
   doc: (id: string) => `doc:${id}`,
   driveToken: 'drive:token',

@@ -6,8 +6,9 @@ import { Datos } from './data/datos';
 import { Avisos } from './ui/avisos';
 import { Actualizador } from './data/actualizador';
 import { estadoPrueba } from './core/prueba-luciana';
-import { PRUEBAS, pruebaActiva } from './core/pruebas';
-import { hoyISO } from './core/fechas';
+import { pruebaActiva } from './core/pruebas';
+import { Configuracion } from './data/configuracion';
+import { fechaCorta, hoyISO } from './core/fechas';
 import { resumen } from './core/pendientes';
 
 interface Tab { ruta: string; texto: string; icono: string; }
@@ -23,6 +24,7 @@ export class App {
   private readonly router = inject(Router);
   protected readonly avisos = inject(Avisos);
   protected readonly actualizador = inject(Actualizador);
+  private readonly cfg = inject(Configuracion);
 
   protected readonly tabs: Tab[] = [
     { ruta: '/hoy', texto: 'Hoy', icono: 'M12 3v18M3 12h18' },
@@ -47,24 +49,37 @@ export class App {
     params: () => ({ v: this.datos.cambios() }),
     loader: async () => {
       const hoy = hoyISO();
-      const [cierres, reuniones, pendientes] = await Promise.all([
-        this.datos.cierresDePruebas(PRUEBAS.map(p => p.id)),
+      const pruebas = this.cfg.reglas().pruebas;
+      const [cierres, reuniones, pendientes, inicio] = await Promise.all([
+        this.datos.cierresDePruebas(pruebas.map(p => p.id)),
         this.datos.reuniones(),
         this.datos.pendientes(),
+        this.datos.desdeCuando(),
       ]);
       // Una prueba ya decidida no reclama nada: el punto rojo es de las vivas.
-      const activa = pruebaActiva(cierres);
-      const e = activa ? estadoPrueba(hoy, await this.datos.prueba(activa.id), activa) : null;
+      const activa = pruebaActiva(cierres, pruebas);
+      const e = activa ? estadoPrueba(hoy, await this.datos.prueba(activa.id), activa, inicio) : null;
       return {
+        activa,
         prueba: Boolean(e && (e.vencidas > 0 || e.revisiones.some(r => r.estado === 'hoy'))),
         actas: reuniones.some(r => !r.acta?.length),
-        pendientes: resumen(pendientes, hoy).estancados > 0,
+        pendientes: resumen(pendientes, hoy, inicio).estancados > 0,
       };
     },
   });
 
   protected readonly marcas = computed(() =>
-    this.pendientes.value() ?? { prueba: false, actas: false, pendientes: false });
+    this.pendientes.value() ?? { activa: null, prueba: false, actas: false, pendientes: false });
+
+  /** El menú nombra a quien esté a prueba hoy, no a quien lo estaba cuando se escribió. */
+  protected readonly pruebaMenu = computed(() => {
+    const a = this.marcas().activa;
+    if (!a) return { titulo: 'Pruebas de rol', detalle: 'Nadie a prueba ahora mismo' };
+    return {
+      titulo: `Prueba de ${a.persona.split(' ')[0]}`,
+      detalle: `Revisiones de viernes y decisión del ${fechaCorta(a.decision)}`,
+    };
+  });
 
   protected marca(ruta: string): boolean {
     const m = this.marcas();

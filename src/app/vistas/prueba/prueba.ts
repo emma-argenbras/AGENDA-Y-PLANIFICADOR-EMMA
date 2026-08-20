@@ -4,47 +4,62 @@
  */
 
 import { Component, computed, inject, resource, signal, ChangeDetectionStrategy } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Datos } from '../../data/datos';
 import { Avisos } from '../../ui/avisos';
 import { Dialogo } from '../../ui/dialogo';
-import { estadoPrueba, type RegistroRevision, type Senal } from '../../core/prueba-luciana';
-import { PRUEBAS, pruebaActiva, type PruebaDeRol } from '../../core/pruebas';
+import { estadoPrueba, type RegistroRevision, type RegistrosPrueba, type Senal } from '../../core/prueba-luciana';
+import { pruebaActiva, type PruebaDeRol } from '../../core/pruebas';
+import { Configuracion } from '../../data/configuracion';
 import { fechaCorta, fechaLarga, hoyISO } from '../../core/fechas';
 
 @Component({
   selector: 'app-prueba',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Dialogo],
+  imports: [Dialogo, RouterLink],
   templateUrl: './prueba.html',
   styleUrl: './prueba.css',
 })
 export class Prueba {
   private readonly datos = inject(Datos);
   private readonly avisos = inject(Avisos);
+  private readonly cfg = inject(Configuracion);
+
+  protected readonly pruebas = computed(() => this.cfg.reglas().pruebas);
+  protected readonly hayPruebas = computed(() => this.pruebas().length > 0);
 
   /** La prueba en curso, o la última decidida si ya no queda ninguna abierta. */
-  protected readonly P = computed<PruebaDeRol>(() => {
+  protected readonly P = computed<PruebaDeRol | null>(() => {
+    const lista = this.pruebas();
+    if (!lista.length) return null;
     const cierres = this.cierres.value() ?? {};
-    return pruebaActiva(cierres) ?? PRUEBAS[PRUEBAS.length - 1]!;
+    return pruebaActiva(cierres, lista) ?? lista[lista.length - 1]!;
   });
 
   private readonly cierres = resource({
     params: () => ({ v: this.datos.cambios() }),
-    loader: () => this.datos.cierresDePruebas(PRUEBAS.map(p => p.id)),
+    loader: () => this.datos.cierresDePruebas(this.cfg.reglas().pruebas.map(p => p.id)),
   });
 
   protected readonly archivadas = computed(() =>
-    PRUEBAS.filter(p => (this.cierres.value() ?? {})[p.id] && p.id !== this.P().id));
+    this.pruebas().filter(p => (this.cierres.value() ?? {})[p.id] && p.id !== this.P()?.id));
   protected readonly hoy = hoyISO();
   protected readonly fechaCorta = fechaCorta;
   protected readonly fechaLarga = fechaLarga;
 
   private readonly registros = resource({
-    params: () => ({ v: this.datos.cambios(), id: this.P().id }),
-    loader: ({ params }) => this.datos.prueba(params.id),
+    params: () => ({ v: this.datos.cambios(), id: this.P()?.id ?? '' }),
+    loader: ({ params }): Promise<RegistrosPrueba> =>
+      params.id ? this.datos.prueba(params.id) : Promise.resolve({}),
   });
 
-  protected readonly estado = computed(() => estadoPrueba(this.hoy, this.registros.value() ?? {}, this.P()));
+  private readonly inicio = resource({
+    params: () => ({ v: this.datos.cambios() }),
+    loader: () => this.datos.desdeCuando(),
+  });
+
+  protected readonly estado = computed(() =>
+    estadoPrueba(this.hoy, this.registros.value() ?? {}, this.P() ?? undefined, this.inicio.value() ?? null));
   protected readonly cierre = computed(() => (this.registros.value() ?? {}).__cierre ?? null);
 
   protected readonly ETIQUETAS: Record<string, string> = {
@@ -52,6 +67,7 @@ export class Prueba {
     vencida: '⚠ Vencida sin registrar',
     hoy: '● Es hoy',
     pendiente: 'Pendiente',
+    previa: 'Antes de que empezaras a usar la app',
   };
 
   /* ── Registrar una revisión ────────────────────────────────────────────── */
@@ -73,10 +89,11 @@ export class Prueba {
 
   protected async guardar(): Promise<void> {
     const fecha = this.editando();
-    if (!fecha) return;
+    const actual = this.P();
+    if (!fecha || !actual) return;
     const regs = { ...(this.registros.value() ?? {}) };
     regs[fecha] = { ...this.borrador(), registrado: Date.now() };
-    await this.datos.guardarPrueba(regs, this.P().id);
+    await this.datos.guardarPrueba(regs, actual.id);
     this.editando.set(null);
     this.avisos.mostrar('Revisión registrada.');
   }
@@ -98,7 +115,7 @@ export class Prueba {
   }
 
   protected senalesConDato(datos: RegistroRevision) {
-    return this.P().senales.filter(s => datos[s.id] !== undefined && datos[s.id] !== '');
+    return (this.P()?.senales ?? []).filter(s => datos[s.id] !== undefined && datos[s.id] !== '');
   }
 
   /* ── Pendientes y cierre ───────────────────────────────────────────────── */
@@ -106,9 +123,11 @@ export class Prueba {
   protected respuesta(id: string): unknown { return (this.registros.value() ?? {})[`pendiente:${id}`]; }
 
   protected async responder(id: string, v: string): Promise<void> {
+    const actual = this.P();
+    if (!actual) return;
     const regs = { ...(this.registros.value() ?? {}) };
     (regs as Record<string, unknown>)[`pendiente:${id}`] = v;
-    await this.datos.guardarPrueba(regs, this.P().id);
+    await this.datos.guardarPrueba(regs, actual.id);
     this.avisos.mostrar(`Anotado: ${v}.`);
   }
 
@@ -117,10 +136,11 @@ export class Prueba {
 
   protected async confirmarSalida(): Promise<void> {
     const s = this.eligiendo();
-    if (!s) return;
+    const actual = this.P();
+    if (!s || !actual) return;
     const regs = { ...(this.registros.value() ?? {}) };
     regs.__cierre = { salida: s.id, titulo: s.titulo, nota: this.nota().trim(), fecha: this.hoy };
-    await this.datos.guardarPrueba(regs, this.P().id);
+    await this.datos.guardarPrueba(regs, actual.id);
     this.eligiendo.set(null);
     this.nota.set('');
     this.avisos.mostrar('Decisión registrada.');

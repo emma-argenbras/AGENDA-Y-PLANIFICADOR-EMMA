@@ -31,7 +31,7 @@
 
 <h2 class="seccion">Tabla de delegación (fija)</h2>
 <div class="tarjeta">
-  @for (t of tabla; track t.tarea) {
+  @for (t of tabla(); track t.tarea) {
     <div class="fila sep entre">
       <div class="crece">
         <div>{{ t.tarea }}</div>

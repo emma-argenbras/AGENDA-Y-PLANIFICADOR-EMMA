@@ -10,7 +10,7 @@
  */
 
 import { Component, computed, inject, input, output, signal, ChangeDetectionStrategy } from '@angular/core';
-import { CATEGORIAS } from '../../core/reglas';
+import { Configuracion } from '../../data/configuracion';
 import { Tema } from '../tema';
 import { diaCorto, fechaLarga } from '../../core/fechas';
 import type { Checkin } from '../../core/modelo';
@@ -107,6 +107,7 @@ export class ColumnasDia {
   readonly diaElegido = output<string | null>();
 
   private readonly tema = inject(Tema);
+  private readonly cfg = inject(Configuracion);
   protected readonly elegido = signal<string | null>(null);
 
   protected readonly dias = computed(() => {
@@ -118,7 +119,7 @@ export class ColumnasDia {
         if (!s.categoria) continue;
         porCat.set(s.categoria, (porCat.get(s.categoria) ?? 0) + s.horas);
       }
-      const partes = CATEGORIAS
+      const partes = this.cfg.reglas().categorias
         .filter(c => porCat.has(c.id))
         .map(c => ({
           nombre: c.nombre,

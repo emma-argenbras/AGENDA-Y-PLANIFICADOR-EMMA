@@ -15,7 +15,8 @@ import { Avisos } from '../../ui/avisos';
 import { Semaforo } from '../../ui/semaforo';
 import { BarrasCategoria } from '../../ui/graficos/barras-categoria';
 import { candidatos, estadoSemanal, resumenCierre } from '../../core/semana';
-import { MAX_OBJETIVOS, UNIDADES, type ObjetivoSemana, type PlanSemana, type UnidadId } from '../../core/pendientes';
+import { MAX_OBJETIVOS, type ObjetivoSemana, type PlanSemana, type UnidadId } from '../../core/pendientes';
+import { Configuracion } from '../../data/configuracion';
 import { fugasDelegacion, totalesSemana } from '../../core/clasificador';
 import { UMBRALES } from '../../core/reglas';
 import { diasSemana, esFinDeSemana, fechaCorta, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
@@ -33,7 +34,8 @@ export class Ritual {
   private readonly router = inject(Router);
 
   protected readonly hoy = hoyISO();
-  protected readonly unidades = UNIDADES;
+  private readonly cfg = inject(Configuracion);
+  protected readonly unidades = computed(() => this.cfg.reglas().unidades);
   protected readonly fechaCorta = fechaCorta;
   protected readonly max = MAX_OBJETIVOS;
 
@@ -172,7 +174,7 @@ export class Ritual {
   }
 
   protected nombreUnidad(id: UnidadId): string {
-    return UNIDADES.find(u => u.id === id)?.corto ?? '';
+    return this.cfg.reglas().unidades.find(u => u.id === id)?.corto ?? '';
   }
 
   protected async guardarPlan(): Promise<void> {

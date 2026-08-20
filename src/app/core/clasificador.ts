@@ -9,10 +9,8 @@
  * en 'sin_clasificar' y ofrece 8 chips — nunca un formulario.
  */
 
-import {
-  DELEGACION, CATEGORIAS, DECISIONES_PROPIAS, PERSONAS, CAT,
-  type CategoriaId, type PersonaId, type TotalesSemana,
-} from './reglas';
+import type { CategoriaId, PersonaId, TotalesSemana } from './reglas';
+import { vigentes } from './config';
 
 export interface Delegacion {
   id: string;
@@ -111,10 +109,11 @@ export function segmentar(texto: string): string[] {
  *  3. Pistas de categoría (3.4).
  */
 export function clasificarFragmento(texto: string): Segmento {
+  const v = vigentes();
   const norm = normalizar(texto);
-  const del = mejorMatch(norm, DELEGACION);
-  const propia = mejorMatch(norm, DECISIONES_PROPIAS);
-  const cat = mejorMatch(norm, CATEGORIAS);
+  const del = mejorMatch(norm, v.delegacion);
+  const propia = mejorMatch(norm, v.decisiones);
+  const cat = mejorMatch(norm, v.categorias);
 
   const res: Segmento = {
     texto: (texto || '').trim(),
@@ -140,7 +139,7 @@ export function clasificarFragmento(texto: string): Segmento {
         id: d.id,
         tarea: d.tarea,
         dueno: d.dueno,
-        duenoNombre: PERSONAS[d.dueno]?.nombre || d.dueno,
+        duenoNombre: v.personas[d.dueno]?.nombre || d.dueno,
         excepcion: d.excepcion || null
       };
       res.categoria = d.categoria;
@@ -205,7 +204,7 @@ export function evaluarPrioridad(texto: string) {
 export function detectarResponsables(texto: string): PersonaId[] {
   const norm = normalizar(texto);
   const encontrados = new Set<PersonaId>();
-  for (const [id, p] of Object.entries(PERSONAS)) {
+  for (const [id, p] of Object.entries(vigentes().personas)) {
     for (const alias of p.alias) {
       if (matchPista(norm, normalizar(alias))) { encontrados.add(id as PersonaId); break; }
     }
@@ -219,13 +218,15 @@ export function validarResponsableUnico(texto: string) {
   const ids = detectarResponsables(t);
   const separadores = /( y | e |\/|,|&| o )/i.test(t);
   if (ids.length > 1 || (separadores && ids.length !== 1)) {
+    const personas = vigentes().personas;
     return {
       ok: false,
       motivo: 'Más de un responsable: si aparece más de un nombre, nadie es responsable (regla 1).',
-      detectados: ids.map(i => PERSONAS[i].nombre)
+      detectados: ids.map(i => personas[i]?.nombre ?? i)
     };
   }
-  return { ok: true, detectados: ids.map(i => PERSONAS[i]?.nombre || t) };
+  const personas = vigentes().personas;
+  return { ok: true, detectados: ids.map(i => personas[i]?.nombre || t) };
 }
 
 /** Totales semanales para los umbrales de 3.5. */
@@ -266,6 +267,3 @@ export function fugasDelegacion(checkins: readonly Checkin[]) {
     .map(x => ({ ...x, tareas: [...x.tareas] }))
     .sort((a, b) => b.horas - a.horas);
 }
-
-export const CATEGORIAS_UI = CATEGORIAS;
-export { CAT };

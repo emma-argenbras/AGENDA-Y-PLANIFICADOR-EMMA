@@ -62,7 +62,13 @@ export interface Ajustes {
   horaNoche: string;
   notificaciones: boolean;
   horasDiaPorDefecto: number;
+  /** Cuándo abriste la app por primera vez. Lo pone la app sola. */
   primerUso: string | null;
+  /**
+   * Desde cuándo querés que cuente. Lo ponés vos y le gana a `primerUso`:
+   * es lo que permite arrancar de cero sin borrar nada.
+   */
+  inicio: string | null;
   ultimaSync: number | null;
   ultimaSyncCalendario: number | null;
   tema: 'auto' | 'claro' | 'oscuro';
@@ -78,6 +84,7 @@ export const AJUSTES_POR_DEFECTO: Ajustes = {
   notificaciones: false,
   horasDiaPorDefecto: 8,
   primerUso: null,
+  inicio: null,
   ultimaSync: null,
   ultimaSyncCalendario: null,
   tema: 'auto',

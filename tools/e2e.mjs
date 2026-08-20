@@ -35,12 +35,27 @@ const sinDialogo = async () => {
   await p.waitForFunction(() => !document.querySelector('dialog[open]'), null, { timeout: 10000 });
 };
 
+/**
+ * Ir a #/config y dejar UNA sección abierta.
+ *
+ * Ojo: navegar al mismo hash no recarga nada, así que la pantalla conserva qué
+ * sección estaba abierta. Tocar la cabecera a ciegas la cerraría.
+ */
+const abrirSeccion = async (id) => {
+  await p.goto(URL + '#/config');
+  await p.waitForSelector(`[data-seccion="${id}"]`);
+  if (await p.locator(`[data-seccion="${id}"] .cuerpo`).count() === 0) {
+    await p.click(`[data-seccion="${id}"] .cabecera`);
+  }
+  await p.waitForSelector(`[data-seccion="${id}"] .cuerpo`);
+};
+
 const paso = async (n, fn) => {
   try { await fn(); console.log('✓', n); }
   catch (e) {
     const m = String(e.message).split('\n').slice(0, 2).join(' | ');
     console.log('✗', n, '→', m);
-    if (process.env.DEBUG_E2E && errores.length === 0) {
+    if (process.env.DEBUG_E2E) {
       console.log('   URL:', p.url());
       console.log('   main:', (await p.textContent('main').catch(() => '?')).replace(/\s+/g, ' ').slice(0, 400));
       console.log('   dialogs:', await p.locator('dialog[open]').count());
@@ -285,15 +300,32 @@ await paso('el ritual: lo no cumplido vuelve como candidato y se guarda el plan'
   await p.waitForSelector('text=Umbrales de control');   // vuelve a Semana
 });
 
-await paso('prueba de Luciana: revisión vencida y cuenta atrás', async () => {
+await paso('prueba: lo anterior a la instalación no reclama nada', async () => {
+  await p.goto(URL + '#/prueba');
+  await p.waitForSelector('h1:has-text("Prueba de rol")');
+  const t = await p.textContent('main');
+  // La revisión del 14/08 es anterior al primer uso: no puede ser una deuda.
+  if (t.includes('Vencida sin registrar')) throw new Error('reclama una revisión anterior al arranque');
+  if (!t.includes('Antes de que empezaras a usar la app')) throw new Error('no la marcó como previa');
+  if (!/Faltan \d+ días|Es hoy|Pasaron/.test(t)) throw new Error('no hay cuenta atrás');
+});
+
+await paso('prueba: con la fecha de arranque atrasada, la revisión sí vence', async () => {
+  await p.goto(URL + '#/config');
+  await p.fill('.arranque input[type="date"]', '2026-08-01');
   await p.goto(URL + '#/prueba');
   await p.waitForSelector('text=Prueba en riesgo');
   const t = await p.textContent('main');
   if (!t.includes('Vencida sin registrar')) throw new Error('no marcó la revisión del 14/08');
-  if (!/Faltan \d+ días|Es hoy|Pasaron/.test(t)) throw new Error('no hay cuenta atrás');
+  // Y vuelta a dejarlo como estaba para los pasos que siguen.
+  await p.goto(URL + '#/config');
+  await p.click('.arranque button:has-text("Volver al primer día")');
+  await p.waitForSelector('.arranque button:has-text("Empezar a contar desde hoy")');
 });
 
 await paso('prueba: registrar una revisión con el checklist', async () => {
+  await p.goto(URL + '#/prueba');
+  await p.waitForSelector('h1:has-text("Prueba de rol")');
   await p.locator('.tarjeta:has-text("viernes 21 de agosto") button').click();
   await p.waitForSelector('dialog[open] .senal');
   await p.locator('dialog[open] .senal').nth(0).locator('.chip:has-text("Sí")').click();
@@ -417,6 +449,126 @@ await paso('documentos: lee un PDF de Drive y lo deja buscable', async () => {
   } finally {
     await ctx2.close();
   }
+});
+
+await paso('configuración: abre desde el menú y todo arranca de fábrica', async () => {
+  await p.goto(URL + '#/hoy');
+  await p.click('button[aria-label="Más pantallas"]');
+  await p.click('.menu a[href="#/config"]');
+  await p.waitForSelector('h1:has-text("Configuración")');
+  const secciones = await p.locator('[data-seccion]').count();
+  if (secciones < 9) throw new Error('faltan secciones: ' + secciones);
+  const fabrica = await p.locator('.marca.fabrica').count();
+  if (fabrica !== secciones) throw new Error('alguna sección no arranca de fábrica');
+});
+
+await paso('configuración: la fecha de arranque se fija desde la app', async () => {
+  await p.goto(URL + '#/config');
+  await p.click('button:has-text("Empezar a contar desde hoy")');
+  await p.waitForSelector('dialog[open]');
+  await p.click('dialog[open] button:has-text("Sí, arrancar hoy")');
+  await sinDialogo();
+  await p.waitForSelector('.arranque:has-text("La app cuenta desde el")');
+  const valor = await p.inputValue('.arranque input[type="date"]');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) throw new Error('no guardó la fecha: ' + valor);
+});
+
+await paso('configuración: la regla 3.3 no se puede apagar', async () => {
+  await abrirSeccion('delegacion');
+  await p.waitForSelector('[data-fila="pedidos"]');
+  // Carga de pedidos es forzada: no hay selector de categoría, hay candado.
+  if (await p.locator('[data-fila="pedidos"] [data-campo="categoria"]').count() !== 0) {
+    throw new Error('deja cambiar la categoría de una fila forzada');
+  }
+  await p.waitForSelector('[data-fila="pedidos"] .clavada');
+  // Compras de oficina no es forzada: esa sí se puede recategorizar.
+  if (await p.locator('[data-fila="compras_oficina"] [data-campo="categoria"]').count() !== 1) {
+    throw new Error('no deja cambiar la categoría de una fila común');
+  }
+});
+
+await paso('configuración: cambiar el dueño cambia a quién te manda la app', async () => {
+  await abrirSeccion('delegacion');
+  await p.waitForSelector('[data-fila="bancos"]');
+  await p.selectOption('[data-fila="bancos"] [data-campo="dueno"]', 'potte');
+  await p.click('[data-seccion="delegacion"] button:has-text("Guardar")');
+  await p.waitForSelector('[data-seccion="delegacion"] .marca:not(.fabrica)');
+
+  await p.goto(URL + '#/hoy');
+  await p.waitForSelector('input[placeholder="Agregar prioridad…"]');
+  await p.fill('input[placeholder="Agregar prioridad…"]', 'ir al banco a la mañana');
+  await p.click('button[aria-label="Agregar"]');
+  await p.waitForSelector('dialog[open] h2:has-text("NO ES TUYA")');
+  const t = await p.textContent('dialog[open]');
+  if (!t.includes('Potte')) throw new Error('sigue mandando al dueño viejo: ' + t.slice(0, 120));
+  await p.click('dialog[open] button:has-text("Reescribir")');
+  await sinDialogo();
+});
+
+await paso('configuración: volver al original deshace el cambio', async () => {
+  await abrirSeccion('delegacion');
+  await p.click('[data-seccion="delegacion"] button:has-text("Volver al original")');
+  await p.waitForSelector('dialog[open]');
+  await p.click('dialog[open] button.peligro:has-text("Volver al original")');
+  await sinDialogo();
+  await p.waitForSelector('[data-seccion="delegacion"] .marca.fabrica');
+
+  await p.goto(URL + '#/hoy');
+  await p.waitForSelector('input[placeholder="Agregar prioridad…"]');
+  await p.fill('input[placeholder="Agregar prioridad…"]', 'ir al banco a la mañana');
+  await p.click('button[aria-label="Agregar"]');
+  await p.waitForSelector('dialog[open] h2:has-text("NO ES TUYA")');
+  const t = await p.textContent('dialog[open]');
+  if (!t.includes('Leila')) throw new Error('no volvió al dueño de fábrica: ' + t.slice(0, 120));
+  await p.click('dialog[open] button:has-text("Reescribir")');
+  await sinDialogo();
+});
+
+await paso('configuración: un umbral editado cambia el semáforo', async () => {
+  await abrirSeccion('umbrales');
+  await p.waitForSelector('[data-seccion="umbrales"] input[type="number"]');
+  const piso = p.locator('[data-seccion="umbrales"] input[type="number"]').nth(4); // rolPiso
+  await piso.fill('90');
+  await p.click('[data-seccion="umbrales"] button:has-text("Guardar")');
+  await p.waitForSelector('[data-seccion="umbrales"] .marca:not(.fabrica)');
+  await p.goto(URL + '#/semana');
+  await p.waitForSelector('text=Venta y clientes + Estrategia');
+  const t = await p.textContent('main');
+  if (!t.includes('90%')) throw new Error('el semáforo sigue mostrando el umbral viejo');
+});
+
+await paso('configuración: se puede poner a alguien nuevo a prueba', async () => {
+  await abrirSeccion('pruebas');
+  const habia = await p.locator('[data-prueba]').count();
+  await p.click('[data-seccion="pruebas"] button:has-text("+ Poner a alguien a prueba")');
+  // Esperar a que la fila nueva esté dibujada: escribir antes de eso deja lo
+  // tipeado en el aire, porque el siguiente render lo pisa.
+  await p.waitForFunction(n => document.querySelectorAll('[data-prueba]').length === n,
+                          habia + 1, { timeout: 10000 });
+  const nueva = p.locator('[data-prueba]').last();
+  await nueva.locator('input[placeholder="Quién"]').fill('Marina Gómez');
+  await p.waitForFunction(() => {
+    const c = document.querySelectorAll('[data-prueba] input[placeholder="Quién"]');
+    return c[c.length - 1]?.value === 'Marina Gómez';
+  }, null, { timeout: 10000 });
+  const revisiones = await nueva.locator('.fecha').count();
+  if (revisiones < 3) throw new Error('no calculó los viernes del rango: ' + revisiones);
+  await p.click('[data-seccion="pruebas"] button:has-text("Guardar")');
+  await p.waitForSelector('[data-seccion="pruebas"] .marca:not(.fabrica)');
+  await p.goto(URL + '#/prueba');
+  await p.waitForSelector('h1:has-text("Prueba de rol")');
+  const t = await p.textContent('main');
+  if (!t.includes('Marina')) throw new Error('la pantalla no muestra la prueba nueva');
+});
+
+await paso('configuración: se puede dejar todo como venía', async () => {
+  await p.goto(URL + '#/config');
+  await p.click('button:has-text("Volver todas las reglas al original")');
+  await p.waitForSelector('dialog[open]');
+  await p.click('dialog[open] button.peligro:has-text("Volver al original")');
+  await sinDialogo();
+  const editadas = await p.locator('.marca:not(.fabrica)').count();
+  if (editadas !== 0) throw new Error('quedaron secciones editadas: ' + editadas);
 });
 
 await paso('el instructivo abre desde el menú y los desplegables funcionan', async () => {

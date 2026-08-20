@@ -6,7 +6,7 @@
 import { Component, computed, inject, resource, ChangeDetectionStrategy } from '@angular/core';
 import { Datos } from '../../data/datos';
 import { Avisos } from '../../ui/avisos';
-import { DELEGACION, PERSONAS } from '../../core/reglas';
+import { Configuracion } from '../../data/configuracion';
 import { fechaCorta } from '../../core/fechas';
 import type { Derivacion } from '../../core/modelo';
 
@@ -20,11 +20,16 @@ export class Delegar {
   private readonly avisos = inject(Avisos);
 
   protected readonly fechaCorta = fechaCorta;
-  protected readonly tabla = DELEGACION.map(d => ({
-    tarea: d.tarea,
-    excepcion: d.excepcion ?? '',
-    dueno: PERSONAS[d.dueno].nombre.split(' ')[0],
-  }));
+  private readonly cfg = inject(Configuracion);
+
+  protected readonly tabla = computed(() => {
+    const { delegacion, personas } = this.cfg.reglas();
+    return delegacion.map(d => ({
+      tarea: d.tarea,
+      excepcion: d.excepcion ?? '',
+      dueno: (personas[d.dueno]?.nombre ?? d.dueno).split(' ')[0],
+    }));
+  });
 
   private readonly lista = resource({
     params: () => ({ v: this.datos.cambios() }),
@@ -36,11 +41,12 @@ export class Delegar {
   protected readonly avisadas = computed(() => this.todas().filter(d => d.avisado));
 
   protected readonly grupos = computed(() => {
+    const personas = this.cfg.reglas().personas;
     const mapa = new Map<string, { nombre: string; rol: string; horas: number; items: Derivacion[] }>();
     for (const d of this.pendientes()) {
       const g = mapa.get(d.dueno) ?? {
-        nombre: PERSONAS[d.dueno]?.nombre ?? d.dueno,
-        rol: PERSONAS[d.dueno]?.rol ?? '',
+        nombre: personas[d.dueno]?.nombre ?? d.dueno,
+        rol: personas[d.dueno]?.rol ?? '',
         horas: 0,
         items: [],
       };

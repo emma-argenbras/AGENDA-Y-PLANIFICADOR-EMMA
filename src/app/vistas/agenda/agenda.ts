@@ -16,10 +16,10 @@ import {
   DURACIONES, TIPO, TIPOS, aHora, aMinutos, avisoReuniones, horasDe, horasPorTipo,
   ordenarDia, primerHueco, solapados, type Evento, type TipoEvento,
 } from '../../core/agenda';
-import { CAT } from '../../core/reglas';
+import { Configuracion } from '../../data/configuracion';
 import { evaluarPrioridad } from '../../core/clasificador';
 import { diaCorto, diasSemana, fechaCorta, fechaLarga, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
-import { PRUEBAS, pruebasConRevision } from '../../core/pruebas';
+import { pruebasConRevision } from '../../core/pruebas';
 
 @Component({
   selector: 'app-agenda',
@@ -33,6 +33,7 @@ export class Agenda {
   private readonly avisos = inject(Avisos);
   protected readonly calendario = inject(Calendario);
   private readonly tema = inject(Tema);
+  private readonly cfg = inject(Configuracion);
 
   protected readonly hoy = hoyISO();
   protected readonly tipos = TIPOS;
@@ -61,7 +62,7 @@ export class Agenda {
       ajustes: await this.datos.ajustes(),
       prioridades: await this.datos.prioridades(this.hoy),
       pendientes: (await this.datos.pendientes()).filter(x => x.estado === 'abierto').slice(0, 6),
-      cierres: await this.datos.cierresDePruebas(PRUEBAS.map(p => p.id)),
+      cierres: await this.datos.cierresDePruebas(this.cfg.reglas().pruebas.map(p => p.id)),
     }),
   });
 
@@ -84,7 +85,7 @@ export class Agenda {
       esHoy: fecha === this.hoy,
       eventos: del,
       horas: horasDe(del),
-      revision: pruebasConRevision(fecha, this.datosSemana.value()?.cierres ?? {}).length > 0,
+      revision: pruebasConRevision(fecha, this.datosSemana.value()?.cierres ?? {}, this.cfg.reglas().pruebas).length > 0,
     };
   }));
 
@@ -112,7 +113,7 @@ export class Agenda {
   }
 
   protected color(e: Evento): string {
-    const c = CAT[TIPO[e.tipo].categoria];
+    const c = this.cfg.reglas().cat[TIPO[e.tipo].categoria];
     return this.tema.oscuro() ? c.colorOscuro : c.color;
   }
 

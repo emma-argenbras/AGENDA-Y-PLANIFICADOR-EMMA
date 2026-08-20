@@ -11,7 +11,7 @@
  */
 
 import { Component, computed, inject, input, ChangeDetectionStrategy } from '@angular/core';
-import { CATEGORIAS } from '../../core/reglas';
+import { Configuracion } from '../../data/configuracion';
 import { Tema } from '../tema';
 
 @Component({
@@ -59,11 +59,13 @@ export class BarrasCategoria {
   readonly porCategoria = input.required<Partial<Record<string, number>>>();
   readonly total = input.required<number>();
   private readonly tema = inject(Tema);
+  private readonly cfg = inject(Configuracion);
 
   protected readonly filas = computed(() => {
     const t = this.total();
-    const max = Math.max(...CATEGORIAS.map(c => this.porCategoria()[c.id] ?? 0), 0.5);
-    return CATEGORIAS.map(c => {
+    const categorias = this.cfg.reglas().categorias;
+    const max = Math.max(...categorias.map(c => this.porCategoria()[c.id] ?? 0), 0.5);
+    return categorias.map(c => {
       const horas = Math.round((this.porCategoria()[c.id] ?? 0) * 10) / 10;
       return {
         id: c.id,

@@ -1,0 +1,103 @@
+.arranque { border-color: var(--acento); }
+
+.explica { margin: -6px 0 12px; }
+.explica a { margin-left: 4px; }
+
+.seccion-cfg { padding: 0; overflow: hidden; }
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  background: none;
+  border: 0;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.cabecera .crece { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cabecera .flecha { color: var(--tinta-2); font-size: 15px; }
+
+.marca {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--acento);
+  color: var(--acento-tinta);
+}
+.marca.fabrica { background: var(--fondo-2); color: var(--tinta-2); }
+
+.cuerpo { padding: 0 16px 16px; border-top: 1px solid var(--borde); padding-top: 14px; }
+.cuerpo h3 { margin: 16px 0 6px; font-size: 14px; }
+.cuerpo > .mini { margin: 0 0 12px; }
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: var(--fondo-2);
+}
+.item .campo { margin: 0; }
+.item > .btn { align-self: flex-start; }
+
+.dos, .tres { display: grid; gap: 8px; }
+.dos { grid-template-columns: 1fr 1fr; }
+.tres { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 420px) {
+  .tres { grid-template-columns: 1fr; }
+}
+
+.clavada {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  min-height: 42px;
+  font-size: 13px;
+  color: var(--tinta-2);
+  border: 1px dashed var(--borde);
+  border-radius: 8px;
+}
+
+.candado { margin-top: 12px; }
+
+.senal {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--borde);
+  border-radius: 0 8px 8px 0;
+}
+.senal .btn { align-self: flex-start; }
+
+.prueba { background: none; }
+.borrar-prueba { margin-top: 14px; color: var(--critico); }
+
+.fecha {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--fondo-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.acciones {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--borde);
+}
+.acciones .btn { flex: 1; min-width: 120px; }

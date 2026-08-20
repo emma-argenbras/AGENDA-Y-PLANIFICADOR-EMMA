@@ -15,7 +15,7 @@
   </div>
 }
 
-@for (ind of definiciones; track ind.id) {
+@for (ind of definiciones(); track ind.id) {
   @if (valores(ind.id).length) {
     <h2 class="seccion">{{ ind.titulo }}</h2>
     <div class="tarjeta">
@@ -45,7 +45,7 @@
     <span>Mes</span>
     <input type="month" [value]="mes()" (input)="mes.set($any($event.target).value)">
   </label>
-  @for (ind of definiciones; track ind.id) {
+  @for (ind of definiciones(); track ind.id) {
     <label class="campo">
       <span>{{ ind.titulo }} ({{ ind.unidad }})</span>
       <input type="number" inputmode="decimal" [value]="borrador()[ind.id]"

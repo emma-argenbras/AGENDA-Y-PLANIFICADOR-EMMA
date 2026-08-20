@@ -8,7 +8,7 @@ import { Datos } from '../../data/datos';
 import { Avisos } from '../../ui/avisos';
 import { Dialogo } from '../../ui/dialogo';
 import { validarResponsableUnico } from '../../core/clasificador';
-import { PERSONAS } from '../../core/reglas';
+import { Configuracion } from '../../data/configuracion';
 import { esTuyo, hayLugar } from '../../core/pendientes';
 import { diasEntre, fechaCorta, fechaLarga, hoyISO } from '../../core/fechas';
 import type { Decision, Reunion } from '../../core/modelo';
@@ -27,7 +27,8 @@ export class Actas {
   protected readonly hoy = hoyISO();
   protected readonly fechaCorta = fechaCorta;
   protected readonly fechaLarga = fechaLarga;
-  protected readonly personas = Object.values(PERSONAS).map(p => p.nombre);
+  private readonly cfg = inject(Configuracion);
+  protected readonly personas = computed(() => this.cfg.reglas().personasLista.map(p => p.nombre));
 
   private readonly datosReuniones = resource({
     params: () => ({ v: this.datos.cambios() }),

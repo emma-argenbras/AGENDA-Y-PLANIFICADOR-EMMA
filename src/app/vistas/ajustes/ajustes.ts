@@ -3,6 +3,7 @@
  * Las reglas de negocio no están acá a propósito.
  */
 
+import { RouterLink } from '@angular/router';
 import { Component, computed, inject, linkedSignal, resource, signal, ChangeDetectionStrategy } from '@angular/core';
 import { Datos } from '../../data/datos';
 import { Drive } from '../../data/drive';
@@ -18,7 +19,7 @@ import { hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
 @Component({
   selector: 'app-ajustes',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Dialogo],
+  imports: [Dialogo, RouterLink],
   templateUrl: './ajustes.html',
   styleUrl: './ajustes.css',
 })

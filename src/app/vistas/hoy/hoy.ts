@@ -12,12 +12,13 @@ import { Avisos } from '../../ui/avisos';
 import { Dialogo } from '../../ui/dialogo';
 import { Tema } from '../../ui/tema';
 import { clasificarCheckin, evaluarPrioridad, type Delegacion, type Segmento } from '../../core/clasificador';
-import { CATEGORIAS, CAT, type CategoriaId } from '../../core/reglas';
+import type { CategoriaId } from '../../core/reglas';
+import { Configuracion } from '../../data/configuracion';
 import { esFinDeSemana, fechaCorta, fechaLarga, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
 import { esTuyo, ordenar, type Pendiente } from '../../core/pendientes';
 import { TIPO, aHora, aMinutos, ordenarDia, type Evento } from '../../core/agenda';
 import { estadoPrueba } from '../../core/prueba-luciana';
-import { PRUEBAS, pruebaActiva, pruebasConRevision } from '../../core/pruebas';
+import { pruebaActiva, pruebasConRevision } from '../../core/pruebas';
 import { estadoSemanal } from '../../core/semana';
 import type { Checkin, Derivacion, Prioridad } from '../../core/modelo';
 
@@ -41,14 +42,15 @@ interface Reconocedor {
 export class Hoy {
   private readonly datos = inject(Datos);
   private readonly avisos = inject(Avisos);
+  private readonly cfg = inject(Configuracion);
   protected readonly tema = inject(Tema);
 
   protected readonly hoy = hoyISO();
   protected readonly fechaLarga = fechaLarga(this.hoy);
-  protected readonly categorias = CATEGORIAS;
+  protected readonly categorias = computed(() => this.cfg.reglas().categorias);
   /** Revisión de una prueba en curso que cae hoy, si hay alguna. */
   protected readonly revisionHoy = computed(() =>
-    pruebasConRevision(this.hoy, this.datosDelDia.value()?.cierres ?? {})[0] ?? null);
+    pruebasConRevision(this.hoy, this.datosDelDia.value()?.cierres ?? {}, this.cfg.reglas().pruebas)[0] ?? null);
 
   protected readonly texto = signal('');
   protected readonly dictando = signal(false);
@@ -65,7 +67,8 @@ export class Hoy {
       ultimos: await this.#ultimosDias(),
       plan: await this.datos.plan(inicioSemana(this.hoy)),
       eventos: await this.datos.eventos(this.hoy),
-      cierres: await this.datos.cierresDePruebas(PRUEBAS.map(p => p.id)),
+      cierres: await this.datos.cierresDePruebas(this.cfg.reglas().pruebas.map(p => p.id)),
+      inicio: await this.datos.desdeCuando(),
       planProximo: await this.datos.plan(sumarDias(inicioSemana(this.hoy), 7)),
       pendientes: await this.datos.pendientes(),
       reuniones: await this.datos.reuniones(),
@@ -97,7 +100,7 @@ export class Hoy {
   protected fin(e: Evento): string { return aHora(aMinutos(e.hora) + e.minutos); }
 
   protected colorEvento(e: Evento): string {
-    const c = CAT[TIPO[e.tipo].categoria];
+    const c = this.cfg.reglas().cat[TIPO[e.tipo].categoria];
     return this.tema.oscuro() ? c.colorOscuro : c.color;
   }
 
@@ -105,15 +108,18 @@ export class Hoy {
   private readonly registrosActiva = resource({
     params: () => ({ v: this.datos.cambios() }),
     loader: async () => {
-      const cierres = await this.datos.cierresDePruebas(PRUEBAS.map(p => p.id));
-      const activa = pruebaActiva(cierres);
-      return activa ? { activa, registros: await this.datos.prueba(activa.id) } : null;
+      const pruebas = this.cfg.reglas().pruebas;
+      const cierres = await this.datos.cierresDePruebas(pruebas.map(p => p.id));
+      const activa = pruebaActiva(cierres, pruebas);
+      return activa
+        ? { activa, registros: await this.datos.prueba(activa.id), inicio: await this.datos.desdeCuando() }
+        : null;
     },
   });
 
   protected readonly pruebaVencida = computed(() => {
     const r = this.registrosActiva.value();
-    return r ? estadoPrueba(this.hoy, r.registros, r.activa).vencidas : 0;
+    return r ? estadoPrueba(this.hoy, r.registros, r.activa, r.inicio).vencidas : 0;
   });
 
   /** Viernes o domingo: la app te lleva al ritual semanal en vez de esperarte. */
@@ -268,7 +274,7 @@ export class Hoy {
   }
 
   protected primerNombre(n: string): string { return n.split(' ')[0] ?? n; }
-  protected nombreCategoria(id: string | null): string { return id ? CAT[id as CategoriaId].nombre : ''; }
+  protected nombreCategoria(id: string | null): string { return id ? (this.cfg.reglas().cat[id as CategoriaId]?.nombre ?? '') : ''; }
 
   /* ── Cierre de jornada ─────────────────────────────────────────────────── */
 
@@ -381,7 +387,7 @@ export class Hoy {
 
   protected color(s: Segmento): string {
     if (!s.categoria) return 'var(--tinta-3)';
-    const c = CAT[s.categoria];
+    const c = this.cfg.reglas().cat[s.categoria];
     return this.tema.oscuro() ? c.colorOscuro : c.color;
   }
 }

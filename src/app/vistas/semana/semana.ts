@@ -8,16 +8,17 @@ import { RouterLink } from '@angular/router';
 import { Dialogo } from '../../ui/dialogo';
 import { Avisos } from '../../ui/avisos';
 import {
-  MAX_OBJETIVOS, UNIDADES, progresoPlan,
+  MAX_OBJETIVOS, progresoPlan,
   type PlanSemana, type UnidadId,
 } from '../../core/pendientes';
+import { Configuracion } from '../../data/configuracion';
 import { Datos } from '../../data/datos';
 import { Semaforo } from '../../ui/semaforo';
 import { BarrasCategoria } from '../../ui/graficos/barras-categoria';
 import { ColumnasDia } from '../../ui/graficos/columnas-dia';
 import { LineaTendencia, type PuntoTendencia } from '../../ui/graficos/linea-tendencia';
 import { fugasDelegacion, totalesSemana } from '../../core/clasificador';
-import { CATEGORIAS, UMBRALES } from '../../core/reglas';
+
 import { diasSemana, esFinDeSemana, fechaCorta, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
 
 const SEMANAS_TENDENCIA = 8;
@@ -32,10 +33,11 @@ const SEMANAS_TENDENCIA = 8;
 export class Semana {
   private readonly datos = inject(Datos);
   private readonly avisos = inject(Avisos);
+  private readonly cfg = inject(Configuracion);
 
   protected readonly hoy = hoyISO();
   protected readonly lunes = signal(inicioSemana(this.hoy));
-  protected readonly categorias = CATEGORIAS;
+  protected readonly categorias = computed(() => this.cfg.reglas().categorias);
   protected readonly verNumeros = signal(false);
 
   protected readonly esSemanaActual = computed(() => this.lunes() === inicioSemana(this.hoy));
@@ -64,7 +66,7 @@ export class Semana {
   protected readonly horasFuga = computed(() => redondear(this.fugas().reduce((a, f) => a + f.horas, 0)));
 
   protected readonly umbrales = computed(() =>
-    UMBRALES.map(u => ({ ...u, resultado: u.evaluar(this.totales()) })));
+    this.cfg.reglas().umbrales.map(u => ({ ...u, resultado: u.evaluar(this.totales()) })));
 
   protected readonly habiles = computed(() => this.fechas().filter(f => !esFinDeSemana(f)));
   protected readonly conCierre = computed(() =>
@@ -98,7 +100,7 @@ export class Semana {
 
   protected readonly filasNumeros = computed(() => {
     const t = this.totales();
-    return CATEGORIAS.map(c => ({
+    return this.cfg.reglas().categorias.map(c => ({
       nombre: c.nombre,
       horas: redondear(t.porCategoria[c.id] ?? 0),
       pct: t.total ? Math.round(((t.porCategoria[c.id] ?? 0) / t.total) * 100) : 0,
@@ -110,7 +112,7 @@ export class Semana {
   /* ── Plan de la semana ─────────────────────────────────────────────────── */
 
   protected readonly MAX_OBJETIVOS = MAX_OBJETIVOS;
-  protected readonly unidades = UNIDADES;
+  protected readonly unidades = computed(() => this.cfg.reglas().unidades);
 
   protected readonly plan = computed<PlanSemana | null>(() => this.datosSemana.value()?.plan ?? null);
   protected readonly objetivos = computed(() =>
@@ -152,7 +154,7 @@ export class Semana {
   }
 
   protected nombreUnidad(id: UnidadId): string {
-    return UNIDADES.find(u => u.id === id)?.corto ?? '';
+    return this.cfg.reglas().unidades.find(u => u.id === id)?.corto ?? '';
   }
 
   /* ── Cierre del viernes ────────────────────────────────────────────────── */

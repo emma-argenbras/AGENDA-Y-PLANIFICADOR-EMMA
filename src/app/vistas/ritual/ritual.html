@@ -136,7 +136,7 @@
 
     <div class="rotulo" style="margin:16px 0 6px">Unidad</div>
     <div class="chips" style="margin-bottom:10px">
-      @for (u of unidades; track u.id) {
+      @for (u of unidades(); track u.id) {
         <button class="chip" type="button" [class.activo]="unidad() === u.id"
                 (click)="unidad.set(u.id)">{{ u.corto }}</button>
       }
