@@ -213,6 +213,20 @@ export class Hoy {
     }
   }
 
+  /** Le pone hora a una prioridad, en el primer hueco libre de hoy. */
+  protected async reservar(p: Prioridad): Promise<void> {
+    if (this.bloqueDe(p)) return;
+    const e = await this.datos.reservarBloque(p.texto, this.hoy, p.pendienteId ?? undefined, p.id);
+    this.avisos.mostrar(e
+      ? `Bloque reservado ${e.hora}.`
+      : 'Hoy ya no entra un bloque de una hora.');
+  }
+
+  protected bloqueDe(p: Prioridad): Evento | null {
+    return this.eventos().find(e => e.prioridadId === p.id
+      || (!!p.pendienteId && e.pendienteId === p.pendienteId)) ?? null;
+  }
+
   protected async quitar(p: Prioridad): Promise<void> {
     await this.datos.guardarPrioridades(this.hoy, this.prioridades().filter(x => x.id !== p.id));
   }

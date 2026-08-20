@@ -20,7 +20,7 @@ import {
   ordenar, resumen, type Pendiente, type PlanSemana,
 } from '../../core/pendientes';
 import { DELEGACION, PERSONAS, type PersonaId } from '../../core/reglas';
-import { hoyISO, inicioSemana } from '../../core/fechas';
+import { fechaCorta, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
 import type { Prioridad } from '../../core/modelo';
 
 @Component({
@@ -47,6 +47,7 @@ export class Pendientes {
       pendientes: await this.datos.pendientes(),
       plan: await this.datos.plan(inicioSemana(this.hoy)),
       prioridades: await this.datos.prioridades(this.hoy),
+      eventos: await this.datos.eventosEntre(this.hoy, sumarDias(this.hoy, 7)),
     }),
   });
 
@@ -78,6 +79,24 @@ export class Pendientes {
     return this.abierto() === p.id || estancado(p, this.hoy);
   }
   protected estancado(p: Pendiente): boolean { return estancado(p, this.hoy); }
+  /** Bloque de agenda reservado para este pendiente, si tiene uno. */
+  protected bloque(p: Pendiente) {
+    return (this.estado.value()?.eventos ?? []).find(e => e.pendienteId === p.id) ?? null;
+  }
+
+  protected textoBloque(p: Pendiente): string {
+    const b = this.bloque(p);
+    if (!b) return '';
+    return b.fecha === this.hoy ? `hoy ${b.hora}` : `${fechaCorta(b.fecha)} ${b.hora}`;
+  }
+
+  protected async reservar(p: Pendiente): Promise<void> {
+    const e = await this.datos.reservarBloque(p.texto, this.hoy, p.id);
+    this.avisos.mostrar(e
+      ? `Bloque reservado hoy ${e.hora}.`
+      : 'Hoy no entra un bloque de una hora. Movelo en Agenda.');
+  }
+
   protected esPrioridadHoy(p: Pendiente): boolean {
     return this.prioridadesHoy().some(x => x.pendienteId === p.id);
   }

@@ -29,6 +29,8 @@ export interface Evento {
   reunionId?: string;
   /** Prioridad del día para la que reservaste este bloque. */
   prioridadId?: string;
+  /** Pendiente de la bandeja al que le estás reservando tiempo. */
+  pendienteId?: string;
 }
 
 /**
@@ -52,6 +54,20 @@ export const TIPO = Object.fromEntries(TIPOS.map(t => [t.id, t])) as
   Record<TipoEvento, (typeof TIPOS)[number]>;
 
 export const DURACIONES = [15, 30, 45, 60, 90, 120];
+
+/**
+ * Un bloque reservado para algo de la bandeja. Es el puente entre el «qué»
+ * (Pendientes) y el «cuándo» (Agenda): el texto no se vuelve a escribir, y el
+ * pendiente pasa a saber que tiene hora.
+ */
+export function bloqueDe(
+  texto: string, fecha: string, hora: string, pendienteId?: string, prioridadId?: string,
+): Evento {
+  return {
+    id: crypto.randomUUID(), fecha, hora, minutos: 60,
+    titulo: texto, tipo: 'bloque', origen: 'app', pendienteId, prioridadId,
+  };
+}
 
 export const aMinutos = (hora: string): number => {
   const [h, m] = hora.split(':').map(Number);

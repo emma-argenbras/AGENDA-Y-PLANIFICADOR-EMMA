@@ -52,6 +52,7 @@ export class Agenda {
       eventos: await this.datos.eventosEntre(params.lunes, sumarDias(params.lunes, 6)),
       ajustes: await this.datos.ajustes(),
       prioridades: await this.datos.prioridades(this.hoy),
+      pendientes: (await this.datos.pendientes()).filter(x => x.estado === 'abierto').slice(0, 6),
     }),
   });
 
@@ -80,6 +81,26 @@ export class Agenda {
 
   protected readonly diaSeleccionado = computed(() =>
     this.dias().find(d => d.fecha === this.diaAbierto()) ?? this.dias()[0] ?? null);
+
+  /** Lo que ya está anotado en otro lado: se elige, no se vuelve a escribir. */
+  protected readonly sugerencias = computed(() => {
+    const d = this.datosSemana.value();
+    if (!d) return [];
+    const dePrioridades = d.prioridades.filter(p => !p.hecha)
+      .map(p => ({ texto: p.texto, pendienteId: p.pendienteId ?? undefined, prioridadId: p.id }));
+    const yaEstan = new Set(dePrioridades.map(x => x.texto));
+    const dePendientes = d.pendientes
+      .filter(p => !yaEstan.has(p.texto))
+      .map(p => ({ texto: p.texto, pendienteId: p.id, prioridadId: undefined }));
+    return [...dePrioridades, ...dePendientes].slice(0, 8);
+  });
+
+  protected elegirSugerencia(s: { texto: string; pendienteId?: string; prioridadId?: string }): void {
+    const e = this.editando();
+    if (!e) return;
+    this.bloqueoTexto.set('');
+    this.editando.set({ ...e, titulo: s.texto, pendienteId: s.pendienteId, prioridadId: s.prioridadId });
+  }
 
   protected color(e: Evento): string {
     const c = CAT[TIPO[e.tipo].categoria];

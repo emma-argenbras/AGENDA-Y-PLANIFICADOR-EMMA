@@ -41,6 +41,8 @@ se te ocurre algo  →  Bandeja  →  se cuelga de un objetivo de la semana
                                         ↓
                     la marcás hecha y se cierra sola en la bandeja
 
+un pendiente      →  «Reservar hora»  →  bloque en la agenda, sin reescribirlo
+
 lo que tiene hora  →  Agenda   →  la reunión se cierra con acta
                                         ↓
                     los compromisos a tu nombre vuelven a la bandeja
@@ -67,6 +69,9 @@ Cosas que la app hace sola, sin que haya que configurarlas:
   era urgente.
 - Si la bandeja llega a 20, no deja agregar más hasta que cierres, delegues o descartes algo.
 - Si ninguna de las prioridades del día aporta a un objetivo de la semana, te lo dice.
+- Pendientes y Agenda no se pisan: uno es el **qué** y el otro el **cuándo**. Un pendiente se
+  manda a la agenda con «Reservar hora», que le busca el primer hueco libre; y un bloque nuevo se
+  puede elegir de la bandeja en vez de tipearlo.
 - Si dos eventos de la agenda se pisan, los marca. Y si las reuniones internas agendadas superan
   las 16 hs del manual, avisa antes de que la semana ocurra, no el viernes.
 - Un bloque de trabajo reservado para una tarea de otro no se puede crear: reservarte tiempo para

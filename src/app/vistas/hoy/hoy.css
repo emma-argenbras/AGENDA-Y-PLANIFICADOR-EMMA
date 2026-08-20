@@ -69,3 +69,13 @@
 .dia-lista .franja { width: 4px; height: 26px; border-radius: 3px; flex: 0 0 auto; }
 .dia-lista .hora { font-size: 13px; font-weight: 650; color: var(--tinta-2); min-width: 42px; }
 a { color: var(--acento); }
+
+.enlace {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--acento);
+  text-decoration: underline;
+  cursor: pointer;
+}

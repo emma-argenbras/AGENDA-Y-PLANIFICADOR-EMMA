@@ -20,7 +20,7 @@ import {
 } from '../core/modelo';
 import type { RegistrosPrueba } from '../core/prueba-luciana';
 import type { Pendiente, PlanSemana } from '../core/pendientes';
-import type { Evento } from '../core/agenda';
+import { bloqueDe, primerHueco, type Evento } from '../core/agenda';
 
 @Injectable({ providedIn: 'root' })
 export class Datos {
@@ -80,6 +80,21 @@ export class Datos {
   async actualizarEvento(fecha: string, id: string, cambio: Partial<Evento>): Promise<void> {
     await this.guardarEventos(fecha,
       (await this.eventos(fecha)).map(e => (e.id === id ? { ...e, ...cambio } : e)));
+  }
+
+  /**
+   * Reserva una hora para algo de la bandeja, en el primer hueco libre del día.
+   * Devuelve el evento creado, o null si ese día ya no entra nada.
+   */
+  async reservarBloque(
+    texto: string, fecha: string, pendienteId?: string, prioridadId?: string,
+  ): Promise<Evento | null> {
+    const delDia = await this.eventos(fecha);
+    const hora = primerHueco(delDia, 60);
+    if (!hora) return null;
+    const e = bloqueDe(texto, fecha, hora, pendienteId, prioridadId);
+    await this.guardarEventos(fecha, [...delDia, e]);
+    return e;
   }
 
   async borrarEvento(fecha: string, id: string): Promise<void> {

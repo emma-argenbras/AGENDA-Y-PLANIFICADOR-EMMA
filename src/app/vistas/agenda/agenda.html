@@ -83,6 +83,7 @@
         <div class="titulo-ev">{{ e.titulo }}</div>
         <div class="mini">
           {{ e.tipo === 'reunion' ? 'Reunión interna' : e.tipo === 'cliente' ? 'Cliente o proveedor' : e.tipo === 'bloque' ? 'Bloque de trabajo' : 'Personal' }}
+          @if (e.pendienteId) { · de la bandeja }
           @if (e.con) { · con {{ e.con }} }
           @if (e.origen === 'google') { · de Google Calendar }
           @if (choca(e)) { · <span style="color:var(--critico)">se pisa con otro</span> }
@@ -135,6 +136,16 @@
                 (click)="campo('tipo', t.id)">{{ t.nombre }}</button>
       }
     </div>
+
+    @if (e.tipo === 'bloque' && sugerencias().length) {
+      <div class="rotulo" style="margin-bottom:6px">O traelo de lo que ya tenés anotado</div>
+      <div class="chips" style="margin-bottom:14px">
+        @for (s of sugerencias(); track s.texto) {
+          <button class="chip" type="button" [class.activo]="e.titulo === s.texto"
+                  (click)="elegirSugerencia(s)">{{ s.texto }}</button>
+        }
+      </div>
+    }
 
     <div class="fila" style="gap:12px; margin-bottom:14px">
       <label class="campo crece" style="margin:0">

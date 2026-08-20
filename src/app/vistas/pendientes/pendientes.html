@@ -80,6 +80,7 @@
           } @else {
             <span>{{ antiguedad(p) }}</span>
           }
+          @if (bloque(p)) { <span class="marca-hora">⏱ {{ textoBloque(p) }}</span> }
           @if (p.objetivoId && nombreObjetivo(p.objetivoId)) {
             <span class="objetivo">→ {{ nombreObjetivo(p.objetivoId) }}</span>
           }
@@ -102,6 +103,9 @@
 
     @if (verDetalle(p)) {
       <div class="btn-fila" style="margin-top:10px">
+        @if (!bloque(p)) {
+          <button class="btn chico" type="button" (click)="reservar(p)">Reservar hora</button>
+        }
         <button class="btn chico" type="button" (click)="marcarHecho(p)">Ya está hecho</button>
         <button class="btn chico" type="button" (click)="delegando.set(p)">Delegar</button>
         <button class="btn chico fantasma" type="button" (click)="matando.set(p)">Matarlo</button>

@@ -197,7 +197,21 @@ await paso('hoy: el pendiente sube a prioridad y arrastra su objetivo', async ()
   if (!t.includes('de la bandeja')) throw new Error('no marca que vino de la bandeja');
 });
 
+await paso('el puente: un pendiente se reserva en la agenda sin reescribirlo', async () => {
+  await p.goto(URL + '#/pendientes');
+  const tarjeta = p.locator('.pendiente:has-text("inversor de Rosario")');
+  await tarjeta.locator('button[aria-label="Más opciones"]').click();
+  await tarjeta.locator('button:has-text("Reservar hora")').click();
+  await p.waitForSelector('.aviso.visible');
+  // queda con la hora a la vista en la bandeja…
+  await tarjeta.locator('text=/⏱/').waitFor();
+  // …y aparece en la agenda como bloque venido de la bandeja, sin haberlo tipeado
+  await p.goto(URL + '#/agenda');
+  await p.waitForSelector('.evento:has-text("inversor de Rosario"):has-text("de la bandeja")');
+});
+
 await paso('hoy: marcarla hecha cierra el pendiente en la bandeja', async () => {
+  await p.goto(URL + '#/hoy');
   await p.locator('.prioridad:has-text("inversor de Rosario") .marca').click();
   await p.click('#tabs a[href="#/pendientes"]');
   await p.waitForSelector('text=Cerrados (1)');
