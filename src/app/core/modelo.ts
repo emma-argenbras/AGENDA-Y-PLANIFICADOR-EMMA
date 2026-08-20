@@ -69,7 +69,9 @@ export interface Ajustes {
 }
 
 export const AJUSTES_POR_DEFECTO: Ajustes = {
-  driveClientId: '',
+  // Cliente OAuth «Agenda EVB web» del proyecto agenda-y-planificador-emma.
+  // No es un secreto: viaja en la app. Los permisos que pide son de lectura.
+  driveClientId: '162261027097-jcsr7r9ve7o6cm207f65g7vcgnorc1jd.apps.googleusercontent.com',
   driveFolderId: '1gar-fgb0GdUtS01KdNhDnfWtyJ1MBMkX',
   horaManana: '08:00',
   horaNoche: '20:30',

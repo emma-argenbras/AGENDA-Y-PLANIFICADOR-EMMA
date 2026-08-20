@@ -202,7 +202,12 @@ export class Datos {
   /* ── Ajustes ───────────────────────────────────────────────────────────── */
 
   async ajustes(): Promise<Ajustes> {
-    return { ...AJUSTES_POR_DEFECTO, ...((await this.repo.leer<Partial<Ajustes>>(K.ajustes)) ?? {}) };
+    const guardado = (await this.repo.leer<Partial<Ajustes>>(K.ajustes)) ?? {};
+    const a = { ...AJUSTES_POR_DEFECTO, ...guardado };
+    // Un campo vacío guardado en versiones anteriores no tapa el valor de fábrica.
+    if (!a.driveClientId) a.driveClientId = AJUSTES_POR_DEFECTO.driveClientId;
+    if (!a.driveFolderId) a.driveFolderId = AJUSTES_POR_DEFECTO.driveFolderId;
+    return a;
   }
 
   async guardarAjustes(parcial: Partial<Ajustes>): Promise<Ajustes> {
