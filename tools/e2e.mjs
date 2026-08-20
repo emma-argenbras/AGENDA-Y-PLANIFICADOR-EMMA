@@ -380,6 +380,11 @@ await paso('documentos: lee un PDF de Drive y lo deja buscable', async () => {
     await p2.route('**/drive/v3/files/' + ID + '?alt=media*', r => r.fulfill({
       status: 200, contentType: 'application/pdf', body: Buffer.from(PDF_B64, 'hex'),
     }));
+    // Con permiso guardado, la agenda importa sola: si este pedido no se
+    // responde acá, sale a la red de verdad y la página nunca termina de cargar.
+    await p2.route('**/calendar/v3/**', r => r.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }),
+    }));
 
     // permiso de Google ya concedido y guardado en el dispositivo
     await p2.goto(URL + '#/docs', { waitUntil: 'networkidle' });

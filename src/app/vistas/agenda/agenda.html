@@ -107,10 +107,10 @@
 <div class="tarjeta">
   <div class="fila sep">
     <div class="crece">
-      <span class="fuerte">Traer lo que agendaron otros</span>
+      <span class="fuerte">Google Calendar se trae solo</span>
       <div class="mini">
-        @if (ultimaSync()) { Última vez: {{ ultimaSync() }} } @else { Nunca importado. }
-        Se trae en solo lectura y no toca lo que creaste acá.
+        @if (ultimaSync()) { Última vez: {{ ultimaSync() }}. } @else { Todavía nunca entró. }
+        Se actualiza al abrir esta pantalla y al cambiar de semana; el botón es para forzarlo ya.
       </div>
     </div>
     <button class="btn chico" type="button" [disabled]="calendario.importando()" (click)="importar()">

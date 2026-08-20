@@ -73,6 +73,8 @@ Cosas que la app hace sola, sin que haya que configurarlas:
 - Pendientes y Agenda no se pisan: uno es el **qué** y el otro el **cuándo**. Un pendiente se
   manda a la agenda con «Reservar hora», que le busca el primer hueco libre; y un bloque nuevo se
   puede elegir de la bandeja en vez de tipearlo.
+- La app instalada en el teléfono no puede abrir ventanas emergentes, así que el permiso de Google
+  se pide por redirección de página completa y se vuelve con la sesión hecha.
 - Si dos eventos de la agenda se pisan, los marca. Y si las reuniones internas agendadas superan
   las 16 hs del manual, avisa antes de que la semana ocurra, no el viernes.
 - Un bloque de trabajo reservado para una tarea de otro no se puede crear: reservarte tiempo para
@@ -184,8 +186,8 @@ Después, *Docs → Traer documentos*: baja el texto de los Google Docs, Sheets 
 indexados en el teléfono, así la búsqueda anda offline. Los PDF e imágenes se listan pero no se
 leen. Devuelve el párrafo textual del documento, no una interpretación.
 
-El mismo permiso habilita **Agenda → Importar semana**, que trae de Google Calendar lo que
-agendaron otros. Para eso hay que activar también la **Google Calendar API** en el mismo proyecto
+El mismo permiso habilita la importación de Google Calendar, que corre **sola** al abrir la Agenda
+y al cambiar de semana (con el botón «Actualizar ya» para forzarla). Para eso hay que activar también la **Google Calendar API** en el mismo proyecto
 de Google Cloud. Si ya habías conectado Drive antes de esto, la primera importación te va a pedir
 el permiso de nuevo: ahora incluye el calendario.
 

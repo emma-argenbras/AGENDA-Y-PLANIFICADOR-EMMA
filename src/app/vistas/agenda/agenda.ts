@@ -5,7 +5,7 @@
  * aparece marcado y en solo lectura: es lo que agendaron otros.
  */
 
-import { Component, computed, inject, resource, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, effect, inject, resource, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Datos } from '../../data/datos';
 import { Calendario } from '../../data/calendario';
@@ -43,6 +43,14 @@ export class Agenda {
 
   protected readonly lunes = signal(inicioSemana(this.hoy));
   protected readonly diaAbierto = signal<string>(this.hoy);
+
+  constructor() {
+    // Lo de Google entra solo al abrir la pantalla y al cambiar de semana.
+    effect(() => {
+      const lunes = this.lunes();
+      void this.calendario.importarSiCorresponde(lunes, sumarDias(lunes, 6));
+    });
+  }
   protected readonly esSemanaActual = computed(() => this.lunes() === inicioSemana(this.hoy));
   protected readonly fechas = computed(() => diasSemana(this.lunes()));
 

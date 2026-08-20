@@ -20,6 +20,8 @@ const ALCANCE = [
   'https://www.googleapis.com/auth/calendar.readonly',
 ].join(' ');
 const API = 'https://www.googleapis.com/drive/v3';
+const AUTORIZAR = 'https://accounts.google.com/o/oauth2/v2/auth';
+const VUELTA = 'drive:volviendo-de-google';
 
 const EXPORTABLES: Record<string, string> = {
   'application/vnd.google-apps.document': 'text/plain',
@@ -78,12 +80,30 @@ export class Drive {
     return this.#gis;
   }
 
+  /**
+   * Instalada en la pantalla de inicio, la app corre fuera del navegador y las
+   * ventanas emergentes están bloqueadas: el flujo con popup de Google no puede
+   * funcionar ahí. En ese caso se sale a Google por redirección de página
+   * completa y se vuelve con el permiso puesto.
+   */
+  #esAppInstalada(): boolean {
+    return matchMedia('(display-mode: standalone)').matches
+      || (navigator as { standalone?: boolean }).standalone === true;
+  }
+
   async conectar(): Promise<string> {
     const guardado = await this.#token();
     if (guardado) return guardado;
 
     const { driveClientId } = await this.datos.ajustes();
     if (!driveClientId) throw new Error('Falta el Client ID de Google. Cargalo en Ajustes.');
+
+    if (this.#esAppInstalada()) {
+      await this.#irAGoogle(driveClientId);
+      // La página se va a Google: lo que siga no llega a ejecutarse.
+      return new Promise<string>(() => { /* nunca resuelve: navegamos */ });
+    }
+
     await this.#cargarGis();
     const google = (window as unknown as { google: GoogleGis }).google;
 
@@ -104,6 +124,49 @@ export class Drive {
       });
       cliente.requestAccessToken();
     });
+  }
+
+  /** Sale a Google por redirección, guardando a dónde volver. */
+  async #irAGoogle(clientId: string): Promise<void> {
+    const estado = crypto.randomUUID();
+    sessionStorage.setItem(VUELTA, JSON.stringify({ estado, ruta: location.hash || '#/ajustes' }));
+    const url = new URL(AUTORIZAR);
+    url.searchParams.set('client_id', clientId);
+    url.searchParams.set('redirect_uri', new URL(document.baseURI).href);
+    url.searchParams.set('response_type', 'token');
+    url.searchParams.set('scope', ALCANCE);
+    url.searchParams.set('include_granted_scopes', 'true');
+    url.searchParams.set('state', estado);
+    url.searchParams.set('prompt', 'consent');
+    location.assign(url.toString());
+  }
+
+  /**
+   * Al volver de Google, el permiso llega en el pedazo de dirección después
+   * del #. Se guarda y se limpia la dirección antes de que arranque el ruteo,
+   * que también usa el #.
+   */
+  async recibirDeGoogle(): Promise<boolean> {
+    const bruto = location.hash.startsWith('#') ? location.hash.slice(1) : '';
+    if (!bruto.includes('access_token=') && !bruto.includes('error=')) return false;
+
+    const params = new URLSearchParams(bruto);
+    const pendiente = sessionStorage.getItem(VUELTA);
+    sessionStorage.removeItem(VUELTA);
+    const { estado, ruta } = pendiente
+      ? JSON.parse(pendiente) as { estado: string; ruta: string }
+      : { estado: '', ruta: '#/ajustes' };
+
+    const token = params.get('access_token');
+    const ok = Boolean(token) && params.get('state') === estado;
+    if (ok) {
+      await this.datos.guardarTokenGoogle<Token>({
+        access_token: token!,
+        expira: Date.now() + (Number(params.get('expires_in') ?? 3600) - 60) * 1000,
+      });
+    }
+    history.replaceState(null, '', new URL(ruta || '#/ajustes', document.baseURI).href);
+    return ok;
   }
 
   async desconectar(): Promise<void> {

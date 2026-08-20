@@ -28,12 +28,30 @@ interface EventoGoogle {
   organizer?: { email?: string; displayName?: string; self?: boolean };
 }
 
+const FRESCURA_MS = 30 * 60 * 1000;
+
 @Injectable({ providedIn: 'root' })
 export class Calendario {
   private readonly datos = inject(Datos);
   private readonly drive = inject(Drive);
 
   readonly importando = signal(false);
+
+  /**
+   * Importación automática: se dispara sola al entrar a la Agenda, al abrir la
+   * app y después de conectar Google. Solo actúa si ya hay permiso vigente
+   * —nunca abre ventanas de Google por su cuenta— y si lo traído tiene más de
+   * media hora. Los errores acá son silenciosos: para eso está el botón manual.
+   */
+  async importarSiCorresponde(desdeISO: string, hastaISO: string): Promise<void> {
+    if (this.importando()) return;
+    try {
+      if (!(await this.drive.conectado())) return;
+      const { ultimaSyncCalendario } = await this.datos.ajustes();
+      if (ultimaSyncCalendario && Date.now() - ultimaSyncCalendario < FRESCURA_MS) return;
+      await this.importar(desdeISO, hastaISO);
+    } catch { /* sin red o permiso vencido: el botón manual lo dice mejor */ }
+  }
 
   /**
    * Trae los eventos de un rango y los mezcla con lo que ya está guardado.

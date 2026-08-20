@@ -6,13 +6,14 @@
 import { Component, computed, inject, linkedSignal, resource, signal, ChangeDetectionStrategy } from '@angular/core';
 import { Datos } from '../../data/datos';
 import { Drive } from '../../data/drive';
+import { Calendario } from '../../data/calendario';
 import { Firebase } from '../../data/firebase';
 import { AvisosPush } from '../../data/avisos-push';
 import { Actualizador } from '../../data/actualizador';
 import { Avisos } from '../../ui/avisos';
 import { Dialogo } from '../../ui/dialogo';
 import { Tema, type Preferencia } from '../../ui/tema';
-import { hoyISO } from '../../core/fechas';
+import { hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
 
 @Component({
   selector: 'app-ajustes',
@@ -25,6 +26,7 @@ export class Ajustes {
   protected readonly datos = inject(Datos);
   protected readonly firebase = inject(Firebase);
   protected readonly drive = inject(Drive);
+  private readonly calendario = inject(Calendario);
   protected readonly push = inject(AvisosPush);
   protected readonly tema = inject(Tema);
   protected readonly actualizador = inject(Actualizador);
@@ -97,6 +99,8 @@ export class Ajustes {
       await this.drive.conectar();
       this.avisos.mostrar('Drive conectado.');
       this.datos.cambios.update(v => v + 1);
+      const lunes = inicioSemana(hoyISO());
+      void this.calendario.importar(lunes, sumarDias(lunes, 6)).catch(() => { /* ya se verá en Agenda */ });
     } catch (e) { this.error.set(mensaje(e)); }
   }
 
