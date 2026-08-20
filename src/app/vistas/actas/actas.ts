@@ -9,6 +9,7 @@ import { Avisos } from '../../ui/avisos';
 import { Dialogo } from '../../ui/dialogo';
 import { validarResponsableUnico } from '../../core/clasificador';
 import { PERSONAS } from '../../core/reglas';
+import { esTuyo, hayLugar } from '../../core/pendientes';
 import { diasEntre, fechaCorta, fechaLarga, hoyISO } from '../../core/fechas';
 import type { Decision, Reunion } from '../../core/modelo';
 
@@ -115,9 +116,29 @@ export class Actas {
         }
       : r);
     await this.datos.guardarReuniones(actualizadas);
+
+    // Lo que quedó a tu nombre no puede vivir solo en un acta: va a la bandeja,
+    // que es el único lugar donde después lo vas a volver a ver.
+    const mios = validas.filter(d => esTuyo(d.quien));
+    const yaEstan = await this.datos.pendientes();
+    let sumados = 0;
+    for (const d of mios) {
+      if (yaEstan.some(p => p.texto === d.que && p.estado === 'abierto')) continue;
+      if (!hayLugar([...yaEstan])) break;
+      const nuevo = {
+        id: crypto.randomUUID(), texto: d.que, creado: Date.now(),
+        estado: 'abierto' as const, objetivoId: null, ultimaVezPrioridad: null,
+      };
+      yaEstan.push(nuevo);
+      sumados++;
+    }
+    if (sumados) await this.datos.guardarPendientes(yaEstan);
+
     const tarde = this.hoy !== reunion.fecha;
     this.editando.set(null);
-    this.avisos.mostrar(tarde ? 'Acta guardada (fuera del mismo día).' : 'Acta guardada.');
+    this.avisos.mostrar(
+      sumados ? `Acta guardada. ${sumados} compromiso(s) tuyos fueron a la bandeja.`
+              : tarde ? 'Acta guardada (fuera del mismo día).' : 'Acta guardada.');
   }
 
   protected async marcarHecho(reunionId: string, idx: number): Promise<void> {

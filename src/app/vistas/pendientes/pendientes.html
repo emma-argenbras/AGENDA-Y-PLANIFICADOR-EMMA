@@ -1,0 +1,173 @@
+<p class="chico" style="margin:0 0 14px">
+  Todo lo que sabés que hay que hacer, en un solo lugar. Lo que tiene otro dueño no entra acá.
+</p>
+
+<!-- ── Estado de la bandeja ─────────────────────────────────────────────── -->
+<div class="tarjeta" [class.alerta]="resumen().estancados > 0">
+  <div class="fila sep">
+    <div>
+      <div class="rotulo">En la bandeja</div>
+      <div class="cifra tabular">{{ resumen().abiertos }}<span class="de">/{{ TOPE }}</span></div>
+    </div>
+    <div style="text-align:right">
+      <div class="rotulo">Piden una decisión</div>
+      <div class="cifra tabular" [style.color]="resumen().estancados ? 'var(--critico)' : null">
+        {{ resumen().estancados }}
+      </div>
+    </div>
+  </div>
+  @if (resumen().llena) {
+    <p class="mini" style="margin:10px 0 0">
+      Está llena. Antes de sumar algo nuevo tenés que cerrar, delegar o descartar algo. El tope
+      existe para que esto no se vuelva un cementerio.
+    </p>
+  } @else if (resumen().estancados) {
+    <p class="mini" style="margin:10px 0 0">
+      Hay {{ resumen().estancados }} cosa(s) que llevan más de {{ DIAS }} días sin ser prioridad.
+      Aparecen primero, en rojo: hacelas esta semana, delegalas o matalas.
+    </p>
+  }
+</div>
+
+<!-- ── Alta ─────────────────────────────────────────────────────────────── -->
+<div class="tarjeta">
+  <div class="fila">
+    <input class="crece" type="text" placeholder="¿Qué hay que hacer?" enterkeyhint="done"
+           [value]="nuevo()" (input)="nuevo.set($any($event.target).value)"
+           (keydown.enter)="agregar()" aria-label="Nuevo pendiente">
+    <button class="btn primario" type="button" (click)="agregar()" aria-label="Agregar">+</button>
+  </div>
+  @if (objetivos().length) {
+    <div class="chips" style="margin-top:10px">
+      <button class="chip" type="button" [class.activo]="objetivoNuevo() === null"
+              (click)="objetivoNuevo.set(null)">Suelto</button>
+      @for (o of objetivos(); track o.id) {
+        <button class="chip" type="button" [class.activo]="objetivoNuevo() === o.id"
+                (click)="objetivoNuevo.set(o.id)">{{ o.texto }}</button>
+      }
+    </div>
+    <p class="mini" style="margin:8px 0 0">Atalo a un objetivo de la semana, o dejalo suelto.</p>
+  } @else {
+    <p class="mini" style="margin:10px 0 0">
+      Todavía no definiste los objetivos de esta semana.
+      <a routerLink="/semana">Definilos en Semana</a> y vas a poder atar cada pendiente a uno.
+    </p>
+  }
+</div>
+
+<!-- ── La bandeja ───────────────────────────────────────────────────────── -->
+@if (!lista().length) {
+  <div class="tarjeta">
+    <div class="vacio">
+      <div class="titulo">Bandeja vacía</div>
+      <div class="chico">
+        Cuando se te ocurra algo que hay que hacer y no sea para hoy, va acá. Después lo subís
+        a las prioridades del día cuando le toque.
+      </div>
+    </div>
+  </div>
+}
+
+@for (p of lista(); track p.id) {
+  <div class="tarjeta pendiente" [class.alerta]="estancado(p)">
+    <div class="texto">{{ p.texto }}</div>
+    <div class="meta">
+      @if (estancado(p)) {
+        <span class="marca-roja">{{ diasQuieto(p) }} días sin hacerse</span>
+      } @else if (esPrioridadHoy(p)) {
+        <span class="marca-ok">Es prioridad hoy</span>
+      } @else {
+        <span>{{ diasQuieto(p) }} día(s) en la bandeja</span>
+      }
+      @if (p.objetivoId && nombreObjetivo(p.objetivoId)) {
+        <span class="objetivo">→ {{ nombreObjetivo(p.objetivoId) }}</span>
+      }
+    </div>
+
+    @if (estancado(p)) {
+      <p class="mini" style="margin:0 0 10px">
+        Tres semanas es suficiente para saber que no es urgente. Elegí una:
+      </p>
+    }
+
+    <div class="btn-fila">
+      @if (!esPrioridadHoy(p)) {
+        <button class="btn chico primario" type="button" (click)="aPrioridad(p)">Hacerlo hoy</button>
+      }
+      <button class="btn chico" type="button" (click)="marcarHecho(p)">Ya está hecho</button>
+      <button class="btn chico" type="button" (click)="delegando.set(p)">Delegar</button>
+      <button class="btn chico fantasma" type="button" (click)="matando.set(p)">Matarlo</button>
+    </div>
+
+    @if (objetivos().length) {
+      <div class="chips" style="margin-top:10px">
+        <button class="chip" type="button" [class.activo]="!p.objetivoId"
+                (click)="cambiarObjetivo(p, null)">Suelto</button>
+        @for (o of objetivos(); track o.id) {
+          <button class="chip" type="button" [class.activo]="p.objetivoId === o.id"
+                  (click)="cambiarObjetivo(p, o.id)">{{ o.texto }}</button>
+        }
+      </div>
+    }
+  </div>
+}
+
+<!-- ── Cerrados ─────────────────────────────────────────────────────────── -->
+@if (cerrados().length) {
+  <h2 class="seccion">Cerrados ({{ cerrados().length }})</h2>
+  <div class="tarjeta">
+    <ul class="limpia">
+      @for (p of cerrados().slice(0, 25); track p.id) {
+        <li class="fila sep">
+          <span class="crece">
+            <span class="chico">{{ p.texto }}</span>
+            <div class="mini">
+              @switch (p.estado) {
+                @case ('hecho') { Hecho }
+                @case ('delegado') { Delegado a {{ p.motivo }} }
+                @default { Descartado @if (p.motivo) { — {{ p.motivo }} } }
+              }
+            </div>
+          </span>
+          <button class="btn chico fantasma" type="button" (click)="reabrir(p)">Reabrir</button>
+        </li>
+      }
+    </ul>
+  </div>
+}
+
+<!-- ── Diálogos ─────────────────────────────────────────────────────────── -->
+<app-dialogo [abierto]="!!bloqueo()" titulo="NO ES TUYA" (cerrar)="bloqueo.set(null)">
+  @if (bloqueo(); as b) {
+    <p class="fuerte">{{ b.texto }}</p>
+    <p><span class="pastilla no-tuya">Dueño: {{ b.delegacion.duenoNombre }}</span></p>
+    <p class="chico">Tabla de delegación: «{{ b.delegacion.tarea }}» → {{ b.delegacion.duenoNombre }}.</p>
+    <p class="mini">
+      Tampoco entra a la bandeja. Si lo anotás como tuyo, en dos semanas lo vas a estar haciendo vos.
+    </p>
+  }
+  <button pie class="btn primario" type="button" (click)="derivarBloqueado()">Pasárselo</button>
+  <button pie class="btn" type="button" (click)="bloqueo.set(null)">Reescribir</button>
+</app-dialogo>
+
+<app-dialogo [abierto]="!!delegando()" titulo="¿A quién se lo pasás?"
+             bajada="Va a aparecer en Para delegar, listo para la próxima vez que hablen."
+             (cerrar)="delegando.set(null)">
+  <div class="chips">
+    @for (d of duenos; track d.id) {
+      <button class="chip" type="button" (click)="delegarA(d.id)">{{ d.nombre }}</button>
+    }
+  </div>
+  <button pie class="btn" type="button" (click)="delegando.set(null)">Cancelar</button>
+</app-dialogo>
+
+<app-dialogo [abierto]="!!matando()" titulo="Matarlo"
+             bajada="Decidir que algo no se va a hacer también es decidir. Queda registrado."
+             (cerrar)="matando.set(null)">
+  <label class="campo">
+    <span>¿Por qué no va? (opcional)</span>
+    <input type="text" [value]="motivo()" (input)="motivo.set($any($event.target).value)">
+  </label>
+  <button pie class="btn peligro" type="button" (click)="matar()">Descartarlo</button>
+  <button pie class="btn" type="button" (click)="matando.set(null)">Cancelar</button>
+</app-dialogo>

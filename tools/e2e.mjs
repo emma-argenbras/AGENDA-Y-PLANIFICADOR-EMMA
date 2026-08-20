@@ -26,7 +26,11 @@ p.on('pageerror', e => errores.push('pageerror: ' + e.message));
 
 const paso = async (n, fn) => {
   try { await fn(); console.log('✓', n); }
-  catch (e) { console.log('✗', n, '→', String(e.message).split('\n')[0]); errores.push(n); }
+  catch (e) {
+    const m = String(e.message).split('\n').slice(0, 4).join(' | ');
+    console.log('✗', n, '→', m);
+    errores.push(n);
+  }
 };
 
 await p.goto(URL, { waitUntil: 'networkidle' });
@@ -81,6 +85,61 @@ await paso('ajusta horas y confirma', async () => {
   await p.locator('dialog[open] .segmento').first().locator('.horas button').first().click();
   await p.click('dialog[open] .pie .btn.primario');
   await p.waitForSelector('text=Registrado. Esto es lo que quedó');
+});
+
+await paso('semana: se definen los 3 objetivos y no entra un cuarto', async () => {
+  await p.click('#tabs a[href="#/semana"]');
+  await p.waitForSelector('text=El plan: 3 objetivos');
+  for (const o of ['Cerrar exclusividad Curitiba', 'Ordenar pipeline de Construcción', 'Definir margen de cielorrasos']) {
+    await p.fill('input[placeholder="Objetivo de la semana…"]', o);
+    await p.click('button[aria-label="Agregar"]');
+    await p.waitForSelector(`text=${o}`);
+  }
+  if (await p.locator('input[placeholder="Objetivo de la semana…"]').count()) {
+    throw new Error('deja cargar un cuarto objetivo');
+  }
+});
+
+await paso('bandeja: bloquea lo ajeno y acepta lo tuyo', async () => {
+  await p.click('#tabs a[href="#/pendientes"]');
+  await p.waitForSelector('text=En la bandeja');
+  await p.fill('input[placeholder="¿Qué hay que hacer?"]', 'actualizar la lista de precios de higiene');
+  await p.click('button[aria-label="Agregar"]');
+  await p.waitForSelector('dialog[open] h2:has-text("NO ES TUYA")');
+  const t = await p.textContent('dialog[open]');
+  if (!t.includes('Luciana')) throw new Error('no nombra al dueño');
+  await p.click('dialog[open] .pie .btn.primario');
+  await p.waitForSelector('.aviso.visible');
+
+  await p.fill('input[placeholder="¿Qué hay que hacer?"]', 'preparar la propuesta para el inversor de Rosario');
+  await p.click('button[aria-label="Agregar"]');
+  await p.waitForSelector('.pendiente:has-text("inversor de Rosario")');
+});
+
+await paso('bandeja: el pendiente se cuelga de un objetivo', async () => {
+  await p.locator('.pendiente:has-text("inversor de Rosario") .chip:has-text("Cerrar exclusividad Curitiba")').click();
+  await p.waitForSelector('.pendiente:has-text("→ Cerrar exclusividad Curitiba")');
+});
+
+await paso('hoy: el pendiente sube a prioridad y arrastra su objetivo', async () => {
+  await p.click('#tabs a[href="#/hoy"]');
+  await p.waitForSelector('text=Los 3 objetivos de esta semana');
+  await p.click('button:has-text("Traer de la bandeja")');
+  await p.waitForSelector('dialog[open]');
+  await p.click('dialog[open] button:has-text("Subir")');
+  await p.waitForSelector('.prioridad:has-text("inversor de Rosario")');
+  const t = await p.textContent('.prioridad:has-text("inversor de Rosario")');
+  if (!t.includes('Cerrar exclusividad Curitiba')) throw new Error('perdió el objetivo');
+  if (!t.includes('de la bandeja')) throw new Error('no marca que vino de la bandeja');
+});
+
+await paso('hoy: marcarla hecha cierra el pendiente en la bandeja', async () => {
+  await p.locator('.prioridad:has-text("inversor de Rosario") .marca').click();
+  await p.click('#tabs a[href="#/pendientes"]');
+  await p.waitForSelector('text=Cerrados (1)');
+  if (await p.locator('.pendiente:has-text("inversor de Rosario")').count()) {
+    throw new Error('quedó abierto en la bandeja');
+  }
 });
 
 await paso('semana: 4 umbrales con semáforo y números de cabecera', async () => {
@@ -154,6 +213,21 @@ await paso('actas: acepta un responsable único y deja el compromiso abierto', a
   await p.fill('dialog[open] input[list=personas]', 'Luciana Dalzotto');
   await p.click('dialog[open] .pie .btn.primario');
   await p.waitForSelector('text=Compromisos abiertos (1)');
+});
+
+await paso('actas: un compromiso tuyo cae solo en la bandeja', async () => {
+  await p.goto(URL + '#/actas');
+  await p.click('button:has-text("Registrar reunión")');
+  await p.fill('dialog[open] input[type=text]', 'Comité de precios');
+  await p.click('dialog[open] .pie .btn.primario');
+  await p.locator('button:has-text("Escribir acta")').first().click();
+  await p.locator('dialog[open] .decision input[type=text]').first().fill('Revisar el esquema de comisiones');
+  await p.fill('dialog[open] input[list=personas]', 'Emmanuel Van Breedam');
+  await p.fill('dialog[open] input[type=date]', '2026-08-31');
+  await p.click('dialog[open] .pie .btn.primario');
+  await p.waitForSelector('text=fueron a la bandeja');
+  await p.goto(URL + '#/pendientes');
+  await p.waitForSelector('.pendiente:has-text("esquema de comisiones")');
 });
 
 await paso('delegar: agrupa por dueño lo que no era tuyo', async () => {

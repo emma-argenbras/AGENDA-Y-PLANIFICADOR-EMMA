@@ -11,6 +11,10 @@ export interface Prioridad {
   hecha: boolean;
   creado: number;
   categoria: string | null;
+  /** Si salió de la bandeja, para cerrarla junta cuando la marcás hecha. */
+  pendienteId?: string | null;
+  /** Objetivo de la semana al que aporta, si aporta a alguno. */
+  objetivoId?: string | null;
 }
 
 export interface Decision {

@@ -7,6 +7,7 @@ import { Avisos } from './ui/avisos';
 import { Actualizador } from './data/actualizador';
 import { estadoPrueba } from './core/prueba-luciana';
 import { hoyISO } from './core/fechas';
+import { resumen } from './core/pendientes';
 
 interface Tab { ruta: string; texto: string; icono: string; }
 
@@ -24,10 +25,10 @@ export class App {
 
   protected readonly tabs: Tab[] = [
     { ruta: '/hoy', texto: 'Hoy', icono: 'M12 3v18M3 12h18' },
-    { ruta: '/semana', texto: 'Semana', icono: 'M3 6h18M3 12h18M3 18h12' },
+    { ruta: '/pendientes', texto: 'Pendientes', icono: 'M4 6h16M4 12h16M4 18h9M20 17l-3 3-1.6-1.6' },
+    { ruta: '/semana', texto: 'Semana', icono: 'M4 5h16v15H4zM4 9h16M9 5V3M15 5V3' },
     { ruta: '/prueba', texto: 'Prueba', icono: 'M12 3a9 9 0 1 0 0 18zM12 3a9 9 0 0 1 0 18' },
     { ruta: '/actas', texto: 'Actas', icono: 'M5 4h14v16H5zM8 9h8M8 13h8M8 17h5' },
-    { ruta: '/docs', texto: 'Docs', icono: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM16.5 16.5 21 21' },
   ];
 
   protected readonly menuAbierto = signal(false);
@@ -44,20 +45,27 @@ export class App {
   private readonly pendientes = resource({
     params: () => ({ v: this.datos.cambios() }),
     loader: async () => {
-      const [prueba, reuniones] = await Promise.all([this.datos.prueba(), this.datos.reuniones()]);
-      const e = estadoPrueba(hoyISO(), prueba);
+      const hoy = hoyISO();
+      const [prueba, reuniones, pendientes] = await Promise.all([
+        this.datos.prueba(), this.datos.reuniones(), this.datos.pendientes(),
+      ]);
+      const e = estadoPrueba(hoy, prueba);
       return {
         prueba: e.vencidas > 0 || e.revisiones.some(r => r.estado === 'hoy'),
         actas: reuniones.some(r => !r.acta?.length),
+        pendientes: resumen(pendientes, hoy).estancados > 0,
       };
     },
   });
 
-  protected readonly marcas = computed(() => this.pendientes.value() ?? { prueba: false, actas: false });
+  protected readonly marcas = computed(() =>
+    this.pendientes.value() ?? { prueba: false, actas: false, pendientes: false });
 
   protected marca(ruta: string): boolean {
     const m = this.marcas();
-    return (ruta === '/prueba' && m.prueba) || (ruta === '/actas' && m.actas);
+    return (ruta === '/prueba' && m.prueba)
+        || (ruta === '/actas' && m.actas)
+        || (ruta === '/pendientes' && m.pendientes);
   }
 
   protected cerrarMenu(): void { this.menuAbierto.set(false); }

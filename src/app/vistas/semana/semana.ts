@@ -5,6 +5,12 @@
 
 import { Component, computed, inject, resource, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { Dialogo } from '../../ui/dialogo';
+import { Avisos } from '../../ui/avisos';
+import {
+  MAX_OBJETIVOS, UNIDADES, progresoPlan,
+  type PlanSemana, type UnidadId,
+} from '../../core/pendientes';
 import { Datos } from '../../data/datos';
 import { Semaforo } from '../../ui/semaforo';
 import { BarrasCategoria } from '../../ui/graficos/barras-categoria';
@@ -19,12 +25,13 @@ const SEMANAS_TENDENCIA = 8;
 @Component({
   selector: 'app-semana',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, Semaforo, BarrasCategoria, ColumnasDia, LineaTendencia],
+  imports: [RouterLink, Dialogo, Semaforo, BarrasCategoria, ColumnasDia, LineaTendencia],
   templateUrl: './semana.html',
   styleUrl: './semana.css',
 })
 export class Semana {
   private readonly datos = inject(Datos);
+  private readonly avisos = inject(Avisos);
 
   protected readonly hoy = hoyISO();
   protected readonly lunes = signal(inicioSemana(this.hoy));
@@ -42,7 +49,12 @@ export class Semana {
       const desdeTendencia = sumarDias(params.lunes, -7 * (SEMANAS_TENDENCIA - 1));
       const todo = await this.datos.checkinsEntre(desdeTendencia, sumarDias(params.lunes, 6));
       const dias = diasSemana(params.lunes);
-      return { todo, semana: todo.filter(c => dias.includes(c.fecha)) };
+      return {
+        todo,
+        semana: todo.filter(c => dias.includes(c.fecha)),
+        plan: await this.datos.plan(params.lunes),
+        pendientes: await this.datos.pendientes(),
+      };
     },
   });
 
@@ -94,6 +106,71 @@ export class Semana {
   });
 
   protected mover(semanas: number): void { this.lunes.set(sumarDias(this.lunes(), semanas * 7)); }
+
+  /* ── Plan de la semana ─────────────────────────────────────────────────── */
+
+  protected readonly MAX_OBJETIVOS = MAX_OBJETIVOS;
+  protected readonly unidades = UNIDADES;
+
+  protected readonly plan = computed<PlanSemana | null>(() => this.datosSemana.value()?.plan ?? null);
+  protected readonly objetivos = computed(() =>
+    progresoPlan(this.plan(), this.datosSemana.value()?.pendientes ?? []));
+  protected readonly cumplidos = computed(() => this.objetivos().filter(o => o.hecho).length);
+
+  protected readonly nuevoObjetivo = signal('');
+  protected readonly unidadNueva = signal<UnidadId>('transversal');
+
+  protected async agregarObjetivo(): Promise<void> {
+    const texto = this.nuevoObjetivo().trim();
+    if (!texto) return;
+    const actual = this.plan();
+    if ((actual?.objetivos.length ?? 0) >= MAX_OBJETIVOS) {
+      this.avisos.mostrar(`Tres objetivos por semana. Sacá uno antes de agregar otro.`);
+      return;
+    }
+    const plan: PlanSemana = actual ?? { lunes: this.lunes(), objetivos: [], creado: Date.now() };
+    plan.objetivos = [...plan.objetivos, {
+      id: crypto.randomUUID(), texto, unidad: this.unidadNueva(), hecho: false,
+    }];
+    await this.datos.guardarPlan(plan);
+    this.nuevoObjetivo.set('');
+  }
+
+  protected async alternarObjetivo(id: string): Promise<void> {
+    const plan = this.plan();
+    if (!plan) return;
+    await this.datos.guardarPlan({
+      ...plan,
+      objetivos: plan.objetivos.map(o => (o.id === id ? { ...o, hecho: !o.hecho } : o)),
+    });
+  }
+
+  protected async quitarObjetivo(id: string): Promise<void> {
+    const plan = this.plan();
+    if (!plan) return;
+    await this.datos.guardarPlan({ ...plan, objetivos: plan.objetivos.filter(o => o.id !== id) });
+  }
+
+  protected nombreUnidad(id: UnidadId): string {
+    return UNIDADES.find(u => u.id === id)?.corto ?? '';
+  }
+
+  /* ── Cierre del viernes ────────────────────────────────────────────────── */
+
+  protected readonly cerrando = signal(false);
+  protected readonly notaCierre = signal('');
+
+  protected async cerrarSemana(): Promise<void> {
+    const plan = this.plan();
+    if (!plan) return;
+    await this.datos.guardarPlan({
+      ...plan,
+      cerrado: { fecha: this.hoy, nota: this.notaCierre().trim() },
+    });
+    this.cerrando.set(false);
+    this.notaCierre.set('');
+    this.avisos.mostrar('Semana cerrada.');
+  }
 }
 
 function redondear(n: number): number { return Math.round(n * 10) / 10; }

@@ -26,6 +26,44 @@
   </div>
 }
 
+<!-- ── Compromisos de actas que caen hoy ────────────────────────────────── -->
+@if (compromisos().length) {
+  <h2 class="seccion">Te comprometiste a esto</h2>
+  @for (c of compromisos(); track c.reunionId + '-' + c.idx) {
+    <div class="tarjeta" [class.alerta]="vencido(c.cuando)">
+      <div class="fila">
+        <button class="marca" type="button" (click)="cumplirCompromiso(c.reunionId, c.idx)"
+                aria-label="Marcar como cumplido"></button>
+        <div class="crece">
+          <div>{{ c.que }}</div>
+          <div class="mini">
+            {{ vencido(c.cuando) ? 'Vencía' : 'Vence hoy' }} {{ fechaCorta(c.cuando) }} · {{ c.reunion }}
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+}
+
+<!-- ── Objetivos de la semana ───────────────────────────────────────────── -->
+@if (objetivos().length) {
+  <h2 class="seccion">Los 3 objetivos de esta semana</h2>
+  <div class="tarjeta objetivos">
+    @for (o of objetivos(); track o.id) {
+      <div class="obj" [class.hecho]="o.hecho">
+        <span class="bolita" [class.llena]="o.hecho"></span>
+        <span class="crece" [class.tachado]="o.hecho">{{ o.texto }}</span>
+      </div>
+    }
+    @if (sinRumbo()) {
+      <p class="mini aviso-rumbo">
+        Ninguna de las prioridades de hoy aporta a estos objetivos. Puede estar bien un día;
+        tres días seguidos quiere decir que la semana se te está yendo en otra cosa.
+      </p>
+    }
+  </div>
+}
+
 <!-- ── Prioridades ──────────────────────────────────────────────────────── -->
 <h2 class="seccion">Prioridades de hoy ({{ prioridades().length }}/3)</h2>
 
@@ -52,7 +90,11 @@
     </button>
     <div class="crece">
       <div [class.tachado]="p.hecha">{{ p.texto }}</div>
-      @if (p.categoria) { <div class="mini">{{ nombreCategoria(p.categoria) }}</div> }
+      <div class="mini">
+        @if (p.categoria) { {{ nombreCategoria(p.categoria) }} }
+        @if (p.objetivoId && nombreObjetivo(p.objetivoId)) { · → {{ nombreObjetivo(p.objetivoId) }} }
+        @if (p.pendienteId) { · de la bandeja }
+      </div>
     </div>
     <button class="btn chico fantasma" type="button" (click)="quitar(p)" aria-label="Quitar">✕</button>
   </div>
@@ -63,6 +105,24 @@
          [value]="nueva()" (input)="nueva.set($any($event.target).value)"
          (keydown.enter)="agregar()" aria-label="Nueva prioridad">
   <button class="btn primario" type="button" (click)="agregar()" aria-label="Agregar">+</button>
+</div>
+
+@if (objetivos().length) {
+  <div class="chips" style="margin-top:10px">
+    <button class="chip" type="button" [class.activo]="objetivoElegido() === null"
+            (click)="objetivoElegido.set(null)">Suelta</button>
+    @for (o of objetivos(); track o.id) {
+      <button class="chip" type="button" [class.activo]="objetivoElegido() === o.id"
+              (click)="objetivoElegido.set(o.id)">{{ o.texto }}</button>
+    }
+  </div>
+}
+
+<div class="btn-fila" style="margin-top:10px">
+  <button class="btn chico" type="button" (click)="eligiendo.set(true)">
+    Traer de la bandeja @if (bandeja().length) { ({{ bandeja().length }}) }
+  </button>
+  <a class="btn chico fantasma" routerLink="/pendientes">Ver la bandeja</a>
 </div>
 
 <!-- ── Cierre de jornada ────────────────────────────────────────────────── -->
@@ -209,4 +269,30 @@
             aria-label="Qué pasó ese día"></textarea>
   <button pie class="btn primario" type="button" (click)="guardarDiaPasado()">Seguir</button>
   <button pie class="btn" type="button" (click)="diaPasado.set(null)">Cancelar</button>
+</app-dialogo>
+
+<app-dialogo [abierto]="eligiendo()" titulo="Traer de la bandeja"
+             bajada="Lo que subas acá deja de estar quieto: la bandeja reinicia su reloj."
+             (cerrar)="eligiendo.set(false)">
+  @if (bandeja().length) {
+    <ul class="limpia">
+      @for (p of bandeja(); track p.id) {
+        <li class="fila sep">
+          <span class="crece">
+            <span>{{ p.texto }}</span>
+            @if (p.objetivoId && nombreObjetivo(p.objetivoId)) {
+              <div class="mini">→ {{ nombreObjetivo(p.objetivoId) }}</div>
+            }
+          </span>
+          <button class="btn chico primario" type="button" (click)="desdeBandeja(p)">Subir</button>
+        </li>
+      }
+    </ul>
+  } @else {
+    <div class="vacio">
+      <div class="titulo">La bandeja está vacía</div>
+      <div class="chico">Cuando se te ocurra algo que no es para hoy, guardalo ahí.</div>
+    </div>
+  }
+  <button pie class="btn" type="button" (click)="eligiendo.set(false)">Cerrar</button>
 </app-dialogo>

@@ -14,7 +14,8 @@ import { Tema } from '../../ui/tema';
 import { clasificarCheckin, evaluarPrioridad, type Delegacion, type Segmento } from '../../core/clasificador';
 import { CATEGORIAS, CAT, type CategoriaId } from '../../core/reglas';
 import { PRUEBA } from '../../core/prueba-luciana';
-import { esFinDeSemana, fechaLarga, hoyISO, sumarDias } from '../../core/fechas';
+import { esFinDeSemana, fechaCorta, fechaLarga, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
+import { esTuyo, ordenar, type Pendiente } from '../../core/pendientes';
 import type { Checkin, Derivacion, Prioridad } from '../../core/modelo';
 
 const MAX = 3;
@@ -57,6 +58,9 @@ export class Hoy {
       checkin: await this.datos.checkin(this.hoy),
       racha: await this.datos.rachaSinRegistro(sumarDias(this.hoy, -1)),
       ultimos: await this.#ultimosDias(),
+      plan: await this.datos.plan(inicioSemana(this.hoy)),
+      pendientes: await this.datos.pendientes(),
+      reuniones: await this.datos.reuniones(),
     }),
   });
 
@@ -67,6 +71,63 @@ export class Hoy {
   protected readonly ultimos = computed(() => this.datosDelDia.value()?.ultimos ?? []);
   protected readonly totalHoy = computed(() =>
     (this.checkin()?.segmentos ?? []).reduce((a, s) => a + (s.horas || 0), 0));
+
+  /* ── El plan de la semana, atado al día ────────────────────────────────── */
+
+  protected readonly objetivos = computed(() => this.datosDelDia.value()?.plan?.objetivos ?? []);
+
+  /** Prioridades de hoy que no aportan a ningún objetivo de la semana. */
+  protected readonly sinRumbo = computed(() =>
+    this.objetivos().length > 0
+    && this.prioridades().length > 0
+    && !this.prioridades().some(p => p.objetivoId));
+
+  protected nombreObjetivo(id: string | null | undefined): string {
+    return this.objetivos().find(o => o.id === id)?.texto ?? '';
+  }
+
+  /* ── La bandeja, a un toque ────────────────────────────────────────────── */
+
+  protected readonly eligiendo = signal(false);
+  protected readonly bandeja = computed<Pendiente[]>(() => {
+    const yaEstan = new Set(this.prioridades().map(p => p.pendienteId).filter(Boolean));
+    return ordenar(this.datosDelDia.value()?.pendientes ?? [], this.hoy)
+      .filter(p => !yaEstan.has(p.id));
+  });
+
+  protected async desdeBandeja(p: Pendiente): Promise<void> {
+    if (this.prioridades().length >= MAX) {
+      this.avisos.mostrar('Ya tenés 3. Sacá una antes de agregar otra.');
+      return;
+    }
+    await this.datos.guardarPrioridades(this.hoy, [...this.prioridades(), {
+      id: crypto.randomUUID(), texto: p.texto, hecha: false, creado: Date.now(),
+      categoria: evaluarPrioridad(p.texto).clasificacion.categoria,
+      pendienteId: p.id, objetivoId: p.objetivoId ?? null,
+    }]);
+    await this.datos.actualizarPendiente(p.id, { ultimaVezPrioridad: this.hoy });
+    this.eligiendo.set(false);
+  }
+
+  /* ── Compromisos de actas que caen hoy ─────────────────────────────────── */
+
+  protected readonly compromisos = computed(() => {
+    return (this.datosDelDia.value()?.reuniones ?? [])
+      .flatMap(r => (r.acta ?? []).map((a, idx) => ({ ...a, reunion: r.titulo, reunionId: r.id, idx })))
+      .filter(c => !c.hecho && c.cuando && c.cuando <= this.hoy && esTuyo(c.quien))
+      .sort((a, b) => a.cuando.localeCompare(b.cuando));
+  });
+
+  protected readonly fechaCorta = fechaCorta;
+  protected vencido(cuando: string): boolean { return cuando < this.hoy; }
+
+  protected async cumplirCompromiso(reunionId: string, idx: number): Promise<void> {
+    const reuniones = this.datosDelDia.value()?.reuniones ?? [];
+    await this.datos.guardarReuniones(reuniones.map(r => r.id === reunionId
+      ? { ...r, acta: r.acta.map((a, j) => (j === idx ? { ...a, hecho: true } : a)) }
+      : r));
+    this.avisos.mostrar('Compromiso cumplido.');
+  }
 
   async #ultimosDias() {
     const desde = sumarDias(this.hoy, -7);
@@ -88,6 +149,7 @@ export class Hoy {
   /* ── Prioridades ───────────────────────────────────────────────────────── */
 
   protected readonly nueva = signal('');
+  protected readonly objetivoElegido = signal<string | null>(null);
   protected readonly bloqueo = signal<{ texto: string; delegacion: Delegacion } | null>(null);
 
   protected async agregar(): Promise<void> {
@@ -105,14 +167,22 @@ export class Hoy {
     const p: Prioridad = {
       id: crypto.randomUUID(), texto, hecha: false, creado: Date.now(),
       categoria: ev.clasificacion.categoria,
+      objetivoId: this.objetivoElegido(),
     };
     await this.datos.guardarPrioridades(this.hoy, [...this.prioridades(), p]);
     this.nueva.set('');
   }
 
   protected async alternar(p: Prioridad): Promise<void> {
+    const hecha = !p.hecha;
     await this.datos.guardarPrioridades(this.hoy,
-      this.prioridades().map(x => (x.id === p.id ? { ...x, hecha: !x.hecha } : x)));
+      this.prioridades().map(x => (x.id === p.id ? { ...x, hecha } : x)));
+    // Si salió de la bandeja, se cierra sola: una cosa hecha se marca una vez.
+    if (p.pendienteId) {
+      await this.datos.actualizarPendiente(p.pendienteId, hecha
+        ? { estado: 'hecho', cerrado: Date.now() }
+        : { estado: 'abierto', cerrado: undefined });
+    }
   }
 
   protected async quitar(p: Prioridad): Promise<void> {

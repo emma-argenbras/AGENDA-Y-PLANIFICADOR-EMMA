@@ -27,6 +27,8 @@ export const K = {
   checkin: (fecha: string) => `checkin:${fecha}`,
   prioridades: (fecha: string) => `prio:${fecha}`,
   reuniones: 'reuniones',
+  pendientes: 'pendientes',
+  plan: (lunes: string) => `plan:${lunes}`,
   derivaciones: 'derivaciones',
   prueba: 'prueba:luciana_2026_08',
   indicadores: 'indicadores',

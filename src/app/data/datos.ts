@@ -19,6 +19,7 @@ import {
   type DocIndexado, type FilaIndicadores, type Prioridad, type Reunion,
 } from '../core/modelo';
 import type { RegistrosPrueba } from '../core/prueba-luciana';
+import type { Pendiente, PlanSemana } from '../core/pendientes';
 
 @Injectable({ providedIn: 'root' })
 export class Datos {
@@ -93,6 +94,27 @@ export class Datos {
     if (!nuevas.length) return;
     await this.guardarDerivaciones([...nuevas, ...(await this.derivaciones())]);
   }
+
+  /* ── Bandeja de pendientes ─────────────────────────────────────────────── */
+
+  async pendientes(): Promise<Pendiente[]> {
+    return (await this.repo.leer<Pendiente[]>(K.pendientes)) ?? [];
+  }
+  guardarPendientes(p: Pendiente[]) { return this.escribir(K.pendientes, p); }
+
+  async agregarPendiente(p: Pendiente): Promise<void> {
+    await this.guardarPendientes([...(await this.pendientes()), p]);
+  }
+
+  async actualizarPendiente(id: string, cambio: Partial<Pendiente>): Promise<void> {
+    await this.guardarPendientes(
+      (await this.pendientes()).map(p => (p.id === id ? { ...p, ...cambio } : p)));
+  }
+
+  /* ── Plan de la semana ─────────────────────────────────────────────────── */
+
+  plan(lunes: string) { return this.repo.leer<PlanSemana>(K.plan(lunes)); }
+  guardarPlan(plan: PlanSemana) { return this.escribir(K.plan(plan.lunes), plan); }
 
   /* ── Prueba de Luciana ─────────────────────────────────────────────────── */
 

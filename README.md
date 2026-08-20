@@ -19,14 +19,31 @@ justamente porque si dependiera de eso no se iba a actualizar nunca.
 | Pantalla | Para qué |
 |---|---|
 | **Hoy** | Máximo 3 prioridades + el cierre de jornada de una sola pregunta. Se puede dictar por voz. |
-| **Semana** | Los 4 umbrales con semáforo y tres gráficos: reparto por categoría, forma del día a día y la tendencia del rol contra el piso del 40%. |
+| **Pendientes** | La bandeja: todo lo que sabés que hay que hacer. Tope de 20, filtro de delegación y caducidad a los 21 días. |
+| **Semana** | Los 3 objetivos de la semana arriba, y debajo el resultado: 4 umbrales con semáforo y tres gráficos. Plan y resultado en la misma pantalla, a propósito. |
 | **Prueba** | Las 4 revisiones de viernes, el checklist de señales, la cuenta atrás al 05/09 y las 3 salidas. |
 | **Actas** | Reunión cerrada = qué se decidió / quién / para cuándo. Sin eso queda «sin acta» y visible. |
-| **Docs** | La carpeta de Drive indexada: preguntás y devuelve el párrafo exacto y de qué archivo salió. |
 | **⋯ → Para delegar** | Todo lo que hiciste vos y tenía otro dueño, agrupado por persona. |
 | **⋯ → Indicadores** | Los 3 números que te tocan, con su evolución mensual. |
 | **⋯ → Ficha de Rol** | Las 7 decisiones, la tabla de delegación y las 5 reglas, solo lectura. |
-| **⋯ → Cómo se usa** | El instructivo, adentro de la app: los tres momentos del día, los viernes, y qué hacer cuando la app te frena. |
+| **⋯ → Cómo se usa** | El instructivo, adentro de la app: dónde va cada cosa, los tres momentos del día, los viernes, y qué hacer cuando la app te frena. |
+| **⋯ → Documentos** | La carpeta de Drive indexada. |
+
+### El circuito
+
+Las tres pantallas no se pisan, se encadenan:
+
+```
+se te ocurre algo  →  Bandeja  →  se cuelga de un objetivo de la semana
+                                        ↓
+                            sube a prioridad del día (máx. 3)
+                                        ↓
+                    la marcás hecha y se cierra sola en la bandeja
+```
+
+Los compromisos que quedan a tu nombre en un acta entran solos a la bandeja: un acta no es un
+lugar donde volver a mirar, la bandeja sí. Y lo que tiene otro dueño no entra en ningún punto de
+la cadena — ni como pendiente, ni como prioridad.
 
 Cosas que la app hace sola, sin que haya que configurarlas:
 
@@ -40,6 +57,11 @@ Cosas que la app hace sola, sin que haya que configurarlas:
 - Si pasan dos días sin cierre de jornada, el aviso deja de ser genérico y lo dice explícitamente.
 - Si una revisión de la prueba de Luciana venció sin registrarse, lo marca en rojo: la regla del
   acuerdo dice que la prueba se cancela.
+- Si un pendiente lleva 21 días sin ser prioridad, pasa al principio de la bandeja en rojo y solo
+  te ofrece tres salidas: hacerlo, delegarlo o matarlo. Tres semanas alcanzan para saber que no
+  era urgente.
+- Si la bandeja llega a 20, no deja agregar más hasta que cierres, delegues o descartes algo.
+- Si ninguna de las prioridades del día aporta a un objetivo de la semana, te lo dice.
 
 Si un día no cargás nada, no se rompe ni queda en blanco: los umbrales quedan en gris («sin
 registro») en vez de mentir con ceros.
@@ -153,10 +175,10 @@ leen. Devuelve el párrafo textual del documento, no una interpretación.
 ```bash
 npm install
 npm start                      # http://localhost:4200
-npm test                       # 19 tests de las reglas de negocio (vitest)
+npm test                       # 29 tests de las reglas de negocio (vitest)
 npm run build                  # build de producción
 npm run servir:dist            # sirve el build en :8099
-npm i -D playwright && npm run test:e2e   # 21 verificaciones en un navegador real
+npm i -D playwright && npm run test:e2e   # 28 verificaciones en un navegador real
 npm run iconos                 # regenera los íconos PNG (sin dependencias)
 ```
 
@@ -180,6 +202,7 @@ botón para instalarla.
 src/app/core/reglas.ts          ★ Secciones 3.1 a 3.7: decisiones propias, tabla de delegación,
                                   8 categorías, 4 umbrales, 5 reglas, 3 indicadores
 src/app/core/prueba-luciana.ts  ★ Sección 4: prueba, revisiones, señales, salidas
+src/app/core/pendientes.ts      ★ Reglas de la bandeja y del plan: tope, caducidad, orden
 src/app/core/clasificador.ts    Motor: texto libre → categoría + dueño real
 src/app/core/fechas.ts          Fechas en hora local
 src/app/data/                   Firestore, sesión de Google, repositorio local, Drive, avisos

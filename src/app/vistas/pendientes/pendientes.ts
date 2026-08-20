@@ -1,0 +1,174 @@
+/**
+ * pendientes.ts — La bandeja: el único lugar donde va lo que sabés que hay que
+ * hacer y todavía no hiciste.
+ *
+ * No es una lista de tareas infinita, a propósito:
+ *  - lo que tiene otro dueño no entra, igual que en las prioridades;
+ *  - hay tope de 20, y cuando se llena tenés que cerrar o delegar algo;
+ *  - a las tres semanas sin ser prioridad, te obliga a decidir: hacerlo esta
+ *    semana, delegarlo o matarlo.
+ */
+
+import { Component, computed, inject, resource, signal, ChangeDetectionStrategy } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { Datos } from '../../data/datos';
+import { Avisos } from '../../ui/avisos';
+import { Dialogo } from '../../ui/dialogo';
+import { evaluarPrioridad, type Delegacion } from '../../core/clasificador';
+import {
+  DIAS_PARA_DECIDIR, MAX_OBJETIVOS, TOPE_BANDEJA, diasQuieto, estancado, hayLugar,
+  ordenar, resumen, type Pendiente, type PlanSemana,
+} from '../../core/pendientes';
+import { DELEGACION, PERSONAS, type PersonaId } from '../../core/reglas';
+import { hoyISO, inicioSemana } from '../../core/fechas';
+import type { Prioridad } from '../../core/modelo';
+
+@Component({
+  selector: 'app-pendientes',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [RouterLink, Dialogo],
+  templateUrl: './pendientes.html',
+  styleUrl: './pendientes.css',
+})
+export class Pendientes {
+  private readonly datos = inject(Datos);
+  private readonly avisos = inject(Avisos);
+
+  protected readonly hoy = hoyISO();
+  protected readonly TOPE = TOPE_BANDEJA;
+  protected readonly DIAS = DIAS_PARA_DECIDIR;
+  protected readonly MAX_OBJETIVOS = MAX_OBJETIVOS;
+  protected readonly duenos = DELEGACION.map(d => ({ id: d.dueno, nombre: PERSONAS[d.dueno].nombre }))
+    .filter((v, i, a) => a.findIndex(x => x.id === v.id) === i);
+
+  private readonly estado = resource({
+    params: () => ({ v: this.datos.cambios() }),
+    loader: async () => ({
+      pendientes: await this.datos.pendientes(),
+      plan: await this.datos.plan(inicioSemana(this.hoy)),
+      prioridades: await this.datos.prioridades(this.hoy),
+    }),
+  });
+
+  protected readonly todos = computed<Pendiente[]>(() => this.estado.value()?.pendientes ?? []);
+  protected readonly plan = computed<PlanSemana | null>(() => this.estado.value()?.plan ?? null);
+  protected readonly prioridadesHoy = computed(() => this.estado.value()?.prioridades ?? []);
+  protected readonly lista = computed(() => ordenar(this.todos(), this.hoy));
+  protected readonly resumen = computed(() => resumen(this.todos(), this.hoy));
+  protected readonly cerrados = computed(() =>
+    this.todos().filter(p => p.estado !== 'abierto').sort((a, b) => (b.cerrado ?? 0) - (a.cerrado ?? 0)));
+
+  protected readonly objetivos = computed(() => this.plan()?.objetivos ?? []);
+
+  protected diasQuieto(p: Pendiente): number { return diasQuieto(p, this.hoy); }
+  protected estancado(p: Pendiente): boolean { return estancado(p, this.hoy); }
+  protected esPrioridadHoy(p: Pendiente): boolean {
+    return this.prioridadesHoy().some(x => x.pendienteId === p.id);
+  }
+  protected nombreObjetivo(id: string | null | undefined): string {
+    return this.objetivos().find(o => o.id === id)?.texto ?? '';
+  }
+
+  /* ── Alta ──────────────────────────────────────────────────────────────── */
+
+  protected readonly nuevo = signal('');
+  protected readonly objetivoNuevo = signal<string | null>(null);
+  protected readonly bloqueo = signal<{ texto: string; delegacion: Delegacion } | null>(null);
+
+  protected async agregar(): Promise<void> {
+    const texto = this.nuevo().trim();
+    if (!texto) return;
+    if (!hayLugar(this.todos())) {
+      this.avisos.mostrar(`La bandeja está llena (${TOPE_BANDEJA}). Cerrá o delegá algo primero.`);
+      return;
+    }
+    const ev = evaluarPrioridad(texto);
+    if (!ev.permitida && ev.delegacion) {
+      this.bloqueo.set({ texto, delegacion: ev.delegacion });
+      return;
+    }
+    await this.datos.agregarPendiente({
+      id: crypto.randomUUID(), texto, creado: Date.now(), estado: 'abierto',
+      objetivoId: this.objetivoNuevo(), ultimaVezPrioridad: null,
+    });
+    this.nuevo.set('');
+  }
+
+  protected async derivarBloqueado(): Promise<void> {
+    const b = this.bloqueo();
+    if (!b) return;
+    await this.datos.agregarDerivaciones([{
+      id: crypto.randomUUID(), texto: b.texto, dueno: b.delegacion.dueno,
+      duenoNombre: b.delegacion.duenoNombre, tarea: b.delegacion.tarea,
+      fecha: this.hoy, origen: 'prioridad', avisado: false, creado: Date.now(),
+    }]);
+    this.avisos.mostrar(`Anotado para pasarle a ${b.delegacion.duenoNombre.split(' ')[0]}.`);
+    this.bloqueo.set(null);
+    this.nuevo.set('');
+  }
+
+  /* ── Las tres salidas ──────────────────────────────────────────────────── */
+
+  /** Hacerlo: sube a las 3 prioridades de hoy. */
+  protected async aPrioridad(p: Pendiente): Promise<void> {
+    const prio = this.prioridadesHoy();
+    if (prio.length >= 3) {
+      this.avisos.mostrar('Ya tenés 3 prioridades hoy. Sacá una antes.');
+      return;
+    }
+    const nueva: Prioridad = {
+      id: crypto.randomUUID(), texto: p.texto, hecha: false, creado: Date.now(),
+      categoria: evaluarPrioridad(p.texto).clasificacion.categoria,
+      pendienteId: p.id, objetivoId: p.objetivoId ?? null,
+    };
+    await this.datos.guardarPrioridades(this.hoy, [...prio, nueva]);
+    await this.datos.actualizarPendiente(p.id, { ultimaVezPrioridad: this.hoy });
+    this.avisos.mostrar('Va como prioridad de hoy.');
+  }
+
+  protected async marcarHecho(p: Pendiente): Promise<void> {
+    await this.datos.actualizarPendiente(p.id, { estado: 'hecho', cerrado: Date.now() });
+    this.avisos.mostrar('Hecho.');
+  }
+
+  protected readonly delegando = signal<Pendiente | null>(null);
+
+  protected async delegarA(dueno: PersonaId): Promise<void> {
+    const p = this.delegando();
+    if (!p) return;
+    await this.datos.agregarDerivaciones([{
+      id: crypto.randomUUID(), texto: p.texto, dueno,
+      duenoNombre: PERSONAS[dueno].nombre, tarea: 'Delegado desde pendientes',
+      fecha: this.hoy, origen: 'prioridad', avisado: false, creado: Date.now(),
+    }]);
+    await this.datos.actualizarPendiente(p.id, {
+      estado: 'delegado', cerrado: Date.now(), motivo: PERSONAS[dueno].nombre,
+    });
+    this.delegando.set(null);
+    this.avisos.mostrar(`Pasó a ${PERSONAS[dueno].nombre.split(' ')[0]}.`);
+  }
+
+  protected readonly matando = signal<Pendiente | null>(null);
+  protected readonly motivo = signal('');
+
+  protected async matar(): Promise<void> {
+    const p = this.matando();
+    if (!p) return;
+    await this.datos.actualizarPendiente(p.id, {
+      estado: 'descartado', cerrado: Date.now(), motivo: this.motivo().trim(),
+    });
+    this.matando.set(null);
+    this.motivo.set('');
+    this.avisos.mostrar('Descartado. Una cosa menos.');
+  }
+
+  protected async cambiarObjetivo(p: Pendiente, objetivoId: string | null): Promise<void> {
+    await this.datos.actualizarPendiente(p.id, { objetivoId });
+  }
+
+  protected async reabrir(p: Pendiente): Promise<void> {
+    await this.datos.actualizarPendiente(p.id, {
+      estado: 'abierto', cerrado: undefined, ultimaVezPrioridad: this.hoy,
+    });
+  }
+}

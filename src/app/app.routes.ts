@@ -3,6 +3,7 @@ import type { Routes } from '@angular/router';
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'hoy' },
   { path: 'hoy', title: 'Hoy', loadComponent: () => import('./vistas/hoy/hoy').then(m => m.Hoy) },
+  { path: 'pendientes', title: 'Pendientes', loadComponent: () => import('./vistas/pendientes/pendientes').then(m => m.Pendientes) },
   { path: 'semana', title: 'Semana', loadComponent: () => import('./vistas/semana/semana').then(m => m.Semana) },
   { path: 'prueba', title: 'Prueba Luciana', loadComponent: () => import('./vistas/prueba/prueba').then(m => m.Prueba) },
   { path: 'actas', title: 'Actas', loadComponent: () => import('./vistas/actas/actas').then(m => m.Actas) },

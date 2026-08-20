@@ -4,6 +4,74 @@
   <button class="btn chico" type="button" [disabled]="esSemanaActual()" (click)="mover(1)">Siguiente ›</button>
 </div>
 
+<!-- ── Plan de la semana ────────────────────────────────────────────────── -->
+<h2 class="seccion">El plan: 3 objetivos ({{ cumplidos() }}/{{ objetivos().length }} cumplidos)</h2>
+
+@if (!objetivos().length) {
+  <div class="tarjeta">
+    <div class="vacio">
+      <div class="titulo">Sin objetivos para esta semana</div>
+      <div class="chico">
+        Tres como máximo, y de los que solo podés mover vos. Después, cada pendiente y cada
+        prioridad del día se atan a uno de estos.
+      </div>
+    </div>
+  </div>
+}
+
+@for (o of objetivos(); track o.id) {
+  <div class="tarjeta objetivo" [class.logrado]="o.hecho">
+    <div class="fila">
+      <button class="marca" type="button" (click)="alternarObjetivo(o.id)"
+              [attr.aria-pressed]="o.hecho" [attr.aria-label]="'Marcar ' + o.texto">
+        @if (o.hecho) {
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+            <path d="M4 10.5 8 14.5 16 6" fill="none" stroke="currentColor" stroke-width="2.6"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        }
+      </button>
+      <div class="crece">
+        <div [class.tachado]="o.hecho">{{ o.texto }}</div>
+        <div class="mini">
+          {{ nombreUnidad(o.unidad) }}
+          @if (o.pendientes) { · {{ o.pendientes }} pendiente(s) atados }
+          @if (o.cerrados) { · {{ o.cerrados }} cerrado(s) }
+        </div>
+      </div>
+      <button class="btn chico fantasma" type="button" (click)="quitarObjetivo(o.id)" aria-label="Quitar">✕</button>
+    </div>
+  </div>
+}
+
+@if (objetivos().length < MAX_OBJETIVOS && esSemanaActual()) {
+  <div class="tarjeta">
+    <div class="fila">
+      <input class="crece" type="text" placeholder="Objetivo de la semana…" enterkeyhint="done"
+             [value]="nuevoObjetivo()" (input)="nuevoObjetivo.set($any($event.target).value)"
+             (keydown.enter)="agregarObjetivo()" aria-label="Nuevo objetivo">
+      <button class="btn primario" type="button" (click)="agregarObjetivo()" aria-label="Agregar">+</button>
+    </div>
+    <div class="chips" style="margin-top:10px">
+      @for (u of unidades; track u.id) {
+        <button class="chip" type="button" [class.activo]="unidadNueva() === u.id"
+                (click)="unidadNueva.set(u.id)">{{ u.nombre }}</button>
+      }
+    </div>
+  </div>
+}
+
+@if (objetivos().length) {
+  <div class="fila sep" style="margin-bottom:12px">
+    <a class="btn chico" routerLink="/pendientes">Ver la bandeja</a>
+    @if (!plan()?.cerrado) {
+      <button class="btn chico" type="button" (click)="cerrando.set(true)">Cerrar la semana</button>
+    } @else {
+      <span class="mini">Cerrada el {{ plan()!.cerrado!.fecha }}</span>
+    }
+  </div>
+}
+
 <!-- ── Números de cabecera ──────────────────────────────────────────────── -->
 <div class="tiles">
   <div class="tarjeta tile">
@@ -117,3 +185,19 @@
     </p>
   </div>
 }
+
+<app-dialogo [abierto]="cerrando()" titulo="Cerrar la semana"
+             bajada="Los objetivos que no cumpliste no desaparecen: sus pendientes siguen en la bandeja."
+             (cerrar)="cerrando.set(false)">
+  <ul class="limpia">
+    @for (o of objetivos(); track o.id) {
+      <li class="chico">{{ o.hecho ? '✓' : '○' }} {{ o.texto }}</li>
+    }
+  </ul>
+  <label class="campo" style="margin-top:12px">
+    <span>Qué aprendiste de esta semana (opcional)</span>
+    <textarea [value]="notaCierre()" (input)="notaCierre.set($any($event.target).value)"></textarea>
+  </label>
+  <button pie class="btn primario" type="button" (click)="cerrarSemana()">Cerrar</button>
+  <button pie class="btn" type="button" (click)="cerrando.set(false)">Cancelar</button>
+</app-dialogo>
