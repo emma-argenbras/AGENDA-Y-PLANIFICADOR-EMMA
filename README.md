@@ -178,7 +178,7 @@ npm start                      # http://localhost:4200
 npm test                       # 29 tests de las reglas de negocio (vitest)
 npm run build                  # build de producción
 npm run servir:dist            # sirve el build en :8099
-npm i -D playwright && npm run test:e2e   # 28 verificaciones en un navegador real
+npm i -D playwright && npm run test:e2e   # 30 verificaciones en un navegador real
 npm run iconos                 # regenera los íconos PNG (sin dependencias)
 ```
 

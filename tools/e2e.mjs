@@ -24,11 +24,26 @@ const p = await ctx.newPage();
 p.on('console', m => { if (m.type() === 'error') errores.push('console: ' + m.text()); });
 p.on('pageerror', e => errores.push('pageerror: ' + e.message));
 
+/**
+ * Un <dialog> modal deja inerte al resto de la página: si el test sigue
+ * escribiendo mientras se está cerrando, el re-render le pisa lo que escribió.
+ * Después de cada acción de un diálogo hay que esperar a que cierre de verdad.
+ */
+const sinDialogo = async () => {
+  await p.waitForFunction(() => !document.querySelector('dialog[open]'), null, { timeout: 10000 });
+};
+
 const paso = async (n, fn) => {
   try { await fn(); console.log('✓', n); }
   catch (e) {
-    const m = String(e.message).split('\n').slice(0, 4).join(' | ');
+    const m = String(e.message).split('\n').slice(0, 2).join(' | ');
     console.log('✗', n, '→', m);
+    if (process.env.DEBUG_E2E && errores.length === 0) {
+      console.log('   URL:', p.url());
+      console.log('   main:', (await p.textContent('main').catch(() => '?')).replace(/\s+/g, ' ').slice(0, 400));
+      console.log('   dialogs:', await p.locator('dialog[open]').count());
+      await p.screenshot({ path: 'fallo.png', fullPage: true }).catch(() => {});
+    }
     errores.push(n);
   }
 };
@@ -55,7 +70,7 @@ await paso('bloquea una prioridad de la tabla de delegación', async () => {
 
 await paso('la única salida del bloqueo es derivarla', async () => {
   await p.click('dialog[open] .pie .btn.primario');
-  await p.waitForSelector('.aviso.visible');
+  await sinDialogo();
   const t = await p.textContent('main');
   if (t.includes('presupuesto de Ruiz')) throw new Error('la dejó entrar igual');
 });
@@ -84,6 +99,7 @@ await paso('la categoría forzada no se puede cambiar a mano', async () => {
 await paso('ajusta horas y confirma', async () => {
   await p.locator('dialog[open] .segmento').first().locator('.horas button').first().click();
   await p.click('dialog[open] .pie .btn.primario');
+  await sinDialogo();
   await p.waitForSelector('text=Registrado. Esto es lo que quedó');
 });
 
@@ -109,11 +125,20 @@ await paso('bandeja: bloquea lo ajeno y acepta lo tuyo', async () => {
   const t = await p.textContent('dialog[open]');
   if (!t.includes('Luciana')) throw new Error('no nombra al dueño');
   await p.click('dialog[open] .pie .btn.primario');
-  await p.waitForSelector('.aviso.visible');
+  await sinDialogo();
 
   await p.fill('input[placeholder="¿Qué hay que hacer?"]', 'preparar la propuesta para el inversor de Rosario');
   await p.click('button[aria-label="Agregar"]');
   await p.waitForSelector('.pendiente:has-text("inversor de Rosario")');
+});
+
+await paso('bandeja: las acciones secundarias están plegadas hasta que las pedís', async () => {
+  const tarjeta = p.locator('.pendiente:has-text("inversor de Rosario")');
+  if (await tarjeta.locator('button:has-text("Matarlo")').count()) {
+    throw new Error('muestra todo desplegado y la lista deja de leerse de un vistazo');
+  }
+  await tarjeta.locator('button[aria-label="Más opciones"]').click();
+  await tarjeta.locator('button:has-text("Matarlo")').waitFor();
 });
 
 await paso('bandeja: el pendiente se cuelga de un objetivo', async () => {
@@ -127,6 +152,7 @@ await paso('hoy: el pendiente sube a prioridad y arrastra su objetivo', async ()
   await p.click('button:has-text("Traer de la bandeja")');
   await p.waitForSelector('dialog[open]');
   await p.click('dialog[open] button:has-text("Subir")');
+  await sinDialogo();
   await p.waitForSelector('.prioridad:has-text("inversor de Rosario")');
   const t = await p.textContent('.prioridad:has-text("inversor de Rosario")');
   if (!t.includes('Cerrar exclusividad Curitiba')) throw new Error('perdió el objetivo');
@@ -192,6 +218,7 @@ await paso('prueba: registrar una revisión con el checklist', async () => {
   await nums.nth(0).fill('0');
   await nums.nth(1).fill('2');
   await p.click('dialog[open] .pie .btn.primario');
+  await sinDialogo();
   await p.waitForSelector('.tarjeta:has-text("viernes 21 de agosto"):has-text("Registrada")');
 });
 
@@ -200,6 +227,7 @@ await paso('actas: rechaza dos responsables', async () => {
   await p.click('button:has-text("Registrar reunión")');
   await p.fill('dialog[open] input[type=text]', 'Directorio semanal');
   await p.click('dialog[open] .pie .btn.primario');
+  await sinDialogo();
   await p.waitForSelector('text=Sin acta');
   await p.click('button:has-text("Escribir acta")');
   await p.fill('dialog[open] input[list=personas]', 'Luciana y Seba');
@@ -212,6 +240,7 @@ await paso('actas: rechaza dos responsables', async () => {
 await paso('actas: acepta un responsable único y deja el compromiso abierto', async () => {
   await p.fill('dialog[open] input[list=personas]', 'Luciana Dalzotto');
   await p.click('dialog[open] .pie .btn.primario');
+  await sinDialogo();
   await p.waitForSelector('text=Compromisos abiertos (1)');
 });
 
@@ -225,6 +254,7 @@ await paso('actas: un compromiso tuyo cae solo en la bandeja', async () => {
   await p.fill('dialog[open] input[list=personas]', 'Emmanuel Van Breedam');
   await p.fill('dialog[open] input[type=date]', '2026-08-31');
   await p.click('dialog[open] .pie .btn.primario');
+  await sinDialogo();
   await p.waitForSelector('text=fueron a la bandeja');
   await p.goto(URL + '#/pendientes');
   await p.waitForSelector('.pendiente:has-text("esquema de comisiones")');

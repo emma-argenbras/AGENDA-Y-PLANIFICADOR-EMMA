@@ -46,7 +46,6 @@
                 (click)="objetivoNuevo.set(o.id)">{{ o.texto }}</button>
       }
     </div>
-    <p class="mini" style="margin:8px 0 0">Atalo a un objetivo de la semana, o dejalo suelto.</p>
   } @else {
     <p class="mini" style="margin:10px 0 0">
       Todavía no definiste los objetivos de esta semana.
@@ -70,44 +69,53 @@
 
 @for (p of lista(); track p.id) {
   <div class="tarjeta pendiente" [class.alerta]="estancado(p)">
-    <div class="texto">{{ p.texto }}</div>
-    <div class="meta">
-      @if (estancado(p)) {
-        <span class="marca-roja">{{ diasQuieto(p) }} días sin hacerse</span>
-      } @else if (esPrioridadHoy(p)) {
-        <span class="marca-ok">Es prioridad hoy</span>
-      } @else {
-        <span>{{ diasQuieto(p) }} día(s) en la bandeja</span>
+    <div class="fila" style="align-items:flex-start;gap:10px">
+      <div class="crece">
+        <div class="texto">{{ p.texto }}</div>
+        <div class="meta">
+          @if (estancado(p)) {
+            <span class="marca-roja">{{ diasQuieto(p) }} días sin hacerse</span>
+          } @else if (esPrioridadHoy(p)) {
+            <span class="marca-ok">Es prioridad hoy</span>
+          } @else {
+            <span>{{ antiguedad(p) }}</span>
+          }
+          @if (p.objetivoId && nombreObjetivo(p.objetivoId)) {
+            <span class="objetivo">→ {{ nombreObjetivo(p.objetivoId) }}</span>
+          }
+        </div>
+      </div>
+      @if (!esPrioridadHoy(p)) {
+        <button class="btn chico primario nowrap" type="button" (click)="aPrioridad(p)">Hoy</button>
       }
-      @if (p.objetivoId && nombreObjetivo(p.objetivoId)) {
-        <span class="objetivo">→ {{ nombreObjetivo(p.objetivoId) }}</span>
+      @if (!estancado(p)) {
+        <button class="btn chico fantasma" type="button" (click)="alternarDetalle(p.id)"
+                [attr.aria-expanded]="abierto() === p.id" aria-label="Más opciones">⋯</button>
       }
     </div>
 
     @if (estancado(p)) {
-      <p class="mini" style="margin:0 0 10px">
+      <p class="mini" style="margin:10px 0 8px">
         Tres semanas es suficiente para saber que no es urgente. Elegí una:
       </p>
     }
 
-    <div class="btn-fila">
-      @if (!esPrioridadHoy(p)) {
-        <button class="btn chico primario" type="button" (click)="aPrioridad(p)">Hacerlo hoy</button>
-      }
-      <button class="btn chico" type="button" (click)="marcarHecho(p)">Ya está hecho</button>
-      <button class="btn chico" type="button" (click)="delegando.set(p)">Delegar</button>
-      <button class="btn chico fantasma" type="button" (click)="matando.set(p)">Matarlo</button>
-    </div>
-
-    @if (objetivos().length) {
-      <div class="chips" style="margin-top:10px">
-        <button class="chip" type="button" [class.activo]="!p.objetivoId"
-                (click)="cambiarObjetivo(p, null)">Suelto</button>
-        @for (o of objetivos(); track o.id) {
-          <button class="chip" type="button" [class.activo]="p.objetivoId === o.id"
-                  (click)="cambiarObjetivo(p, o.id)">{{ o.texto }}</button>
-        }
+    @if (verDetalle(p)) {
+      <div class="btn-fila" style="margin-top:10px">
+        <button class="btn chico" type="button" (click)="marcarHecho(p)">Ya está hecho</button>
+        <button class="btn chico" type="button" (click)="delegando.set(p)">Delegar</button>
+        <button class="btn chico fantasma" type="button" (click)="matando.set(p)">Matarlo</button>
       </div>
+      @if (objetivos().length) {
+        <div class="chips" style="margin-top:10px">
+          <button class="chip" type="button" [class.activo]="!p.objetivoId"
+                  (click)="cambiarObjetivo(p, null)">Suelto</button>
+          @for (o of objetivos(); track o.id) {
+            <button class="chip" type="button" [class.activo]="p.objetivoId === o.id"
+                    (click)="cambiarObjetivo(p, o.id)">{{ o.texto }}</button>
+          }
+        </div>
+      }
     }
   </div>
 }

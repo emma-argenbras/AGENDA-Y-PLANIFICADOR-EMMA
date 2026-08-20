@@ -61,6 +61,22 @@ export class Pendientes {
   protected readonly objetivos = computed(() => this.plan()?.objetivos ?? []);
 
   protected diasQuieto(p: Pendiente): number { return diasQuieto(p, this.hoy); }
+
+  /** «hoy» / «1 día» / «12 días»: los plurales rotos se notan. */
+  protected antiguedad(p: Pendiente): string {
+    const d = diasQuieto(p, this.hoy);
+    if (d === 0) return 'entró hoy';
+    return d === 1 ? 'hace 1 día' : `hace ${d} días`;
+  }
+
+  /** Las acciones secundarias sólo aparecen si las pedís: la lista se lee de un vistazo. */
+  protected readonly abierto = signal<string | null>(null);
+  protected alternarDetalle(id: string): void {
+    this.abierto.set(this.abierto() === id ? null : id);
+  }
+  protected verDetalle(p: Pendiente): boolean {
+    return this.abierto() === p.id || estancado(p, this.hoy);
+  }
   protected estancado(p: Pendiente): boolean { return estancado(p, this.hoy); }
   protected esPrioridadHoy(p: Pendiente): boolean {
     return this.prioridadesHoy().some(x => x.pendienteId === p.id);
