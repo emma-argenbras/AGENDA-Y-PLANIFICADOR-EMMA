@@ -24,6 +24,7 @@ export interface Repositorio {
 
 /** Claves canónicas. Un solo lugar para no escribirlas sueltas por ahí. */
 export const K = {
+  agenda: (fecha: string) => `agenda:${fecha}`,
   checkin: (fecha: string) => `checkin:${fecha}`,
   prioridades: (fecha: string) => `prio:${fecha}`,
   reuniones: 'reuniones',

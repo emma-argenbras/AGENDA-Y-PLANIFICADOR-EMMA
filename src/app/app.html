@@ -3,6 +3,7 @@
     <h1>{{ titulo() }}</h1>
   </div>
   <button class="icono" type="button" aria-label="Más pantallas"
+          [class.con-pendiente]="marcaMenu()"
           [attr.aria-expanded]="menuAbierto()" (click)="menuAbierto.set(!menuAbierto())">
     <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
       <circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>
@@ -13,6 +14,13 @@
 @if (menuAbierto()) {
   <div class="menu-fondo" (click)="cerrarMenu()"></div>
   <nav class="menu" aria-label="Más pantallas">
+    <a routerLink="/prueba" (click)="cerrarMenu()">
+      <span class="fuerte">
+        Prueba de Luciana
+        @if (marcaMenu()) { <i class="punto-menu"></i> }
+      </span>
+      <span class="mini">Revisiones de viernes y decisión del 05/09</span>
+    </a>
     <a routerLink="/delegar" (click)="cerrarMenu()">
       <span class="fuerte">Para delegar</span>
       <span class="mini">Lo que hiciste y no era tuyo</span>

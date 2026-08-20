@@ -103,8 +103,46 @@ await paso('ajusta horas y confirma', async () => {
   await p.waitForSelector('text=Registrado. Esto es lo que quedó');
 });
 
+await paso('agenda: se crea un evento y aparece en el día de Hoy', async () => {
+  await p.click('#tabs a[href="#/agenda"]');
+  await p.waitForSelector('text=Horas agendadas');
+  await p.click('button:has-text("+ Agregar al")');
+  await p.waitForSelector('dialog[open]');
+  await p.fill('dialog[open] input[type=text]', 'Directorio semanal');
+  await p.click('dialog[open] .chip:has-text("Reunión interna")');
+  await p.fill('dialog[open] input[type=time]', '09:00');
+  await p.click('dialog[open] .chip:has-text("1 h")');
+  await p.click('dialog[open] .pie .btn.primario');
+  await sinDialogo();
+  await p.waitForSelector('.evento:has-text("Directorio semanal")');
+  await p.click('#tabs a[href="#/hoy"]');
+  await p.waitForSelector('.dia-lista:has-text("Directorio semanal")');
+});
+
+await paso('agenda: no deja reservarte un bloque para algo de otro', async () => {
+  await p.goto(URL + '#/agenda');
+  await p.click('button:has-text("+ Agregar al")');
+  await p.waitForSelector('dialog[open]');
+  await p.fill('dialog[open] input[type=text]', 'cargar los pedidos de la semana');
+  await p.click('dialog[open] .chip:has-text("Bloque de trabajo")');
+  await p.click('dialog[open] .pie .btn.primario');
+  await p.waitForSelector('dialog[open] .error');
+  const t = await p.textContent('dialog[open] .error');
+  if (!t.includes('Comercial de la unidad')) throw new Error('no nombra al dueño real');
+  await p.click('dialog[open] .pie .btn:not(.primario):not(.peligro)');
+  await sinDialogo();
+});
+
+await paso('agenda: una reunión se puede cerrar con acta', async () => {
+  await p.click('.evento:has-text("Directorio semanal") button:has-text("Cerrar con acta")');
+  await p.waitForSelector('text=Ya está en Actas');
+  await p.goto(URL + '#/actas');
+  // queda en la lista de «sin acta», que se muestra en rojo hasta que la cerrás
+  await p.waitForSelector('.tarjeta.alerta:has-text("Directorio semanal"):has-text("Escribir acta")');
+});
+
 await paso('semana: se definen los 3 objetivos y no entra un cuarto', async () => {
-  await p.click('#tabs a[href="#/semana"]');
+  await p.goto(URL + '#/semana');
   await p.waitForSelector('text=El plan: 3 objetivos');
   for (const o of ['Cerrar exclusividad Curitiba', 'Ordenar pipeline de Construcción', 'Definir margen de cielorrasos']) {
     await p.fill('input[placeholder="Objetivo de la semana…"]', o);
@@ -200,7 +238,7 @@ await paso('semana: tocar un día muestra su detalle', async () => {
 });
 
 await paso('prueba de Luciana: revisión vencida y cuenta atrás', async () => {
-  await p.click('#tabs a[href="#/prueba"]');
+  await p.goto(URL + '#/prueba');
   await p.waitForSelector('text=Prueba en riesgo');
   const t = await p.textContent('main');
   if (!t.includes('Vencida sin registrar')) throw new Error('no marcó la revisión del 14/08');
@@ -223,13 +261,13 @@ await paso('prueba: registrar una revisión con el checklist', async () => {
 });
 
 await paso('actas: rechaza dos responsables', async () => {
-  await p.click('#tabs a[href="#/actas"]');
+  await p.goto(URL + '#/actas');
   await p.click('button:has-text("Registrar reunión")');
   await p.fill('dialog[open] input[type=text]', 'Directorio semanal');
   await p.click('dialog[open] .pie .btn.primario');
   await sinDialogo();
   await p.waitForSelector('text=Sin acta');
-  await p.click('button:has-text("Escribir acta")');
+  await p.locator('.tarjeta:has-text("Directorio semanal") button:has-text("Escribir acta")').first().click();
   await p.fill('dialog[open] input[list=personas]', 'Luciana y Seba');
   await p.locator('dialog[open] .decision input[type=text]').first().fill('Definir margen de cielorrasos');
   await p.fill('dialog[open] input[type=date]', '2026-08-28');
@@ -249,7 +287,7 @@ await paso('actas: un compromiso tuyo cae solo en la bandeja', async () => {
   await p.click('button:has-text("Registrar reunión")');
   await p.fill('dialog[open] input[type=text]', 'Comité de precios');
   await p.click('dialog[open] .pie .btn.primario');
-  await p.locator('button:has-text("Escribir acta")').first().click();
+  await p.locator('.tarjeta:has-text("Comité de precios") button:has-text("Escribir acta")').first().click();
   await p.locator('dialog[open] .decision input[type=text]').first().fill('Revisar el esquema de comisiones');
   await p.fill('dialog[open] input[list=personas]', 'Emmanuel Van Breedam');
   await p.fill('dialog[open] input[type=date]', '2026-08-31');

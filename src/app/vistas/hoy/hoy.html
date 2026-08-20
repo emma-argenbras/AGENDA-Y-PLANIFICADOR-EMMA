@@ -14,6 +14,18 @@
   </div>
 }
 
+@if (pruebaVencida() && !hayRevisionHoy) {
+  <div class="tarjeta alerta">
+    <div class="fila sep">
+      <div class="crece">
+        <span class="fuerte">{{ pruebaVencida() }} revisión(es) de Luciana sin registrar</span>
+        <div class="mini">Si las revisiones no se hacen, la prueba se cancela.</div>
+      </div>
+      <a class="btn chico primario" routerLink="/prueba">Ir</a>
+    </div>
+  </div>
+}
+
 @if (hayRevisionHoy) {
   <div class="tarjeta">
     <div class="fila sep">
@@ -22,6 +34,34 @@
         <p class="mini" style="margin:2px 0 0">15 minutos. Si las revisiones no se hacen, la prueba se cancela.</p>
       </div>
       <a class="btn primario chico" routerLink="/prueba">Registrar</a>
+    </div>
+  </div>
+}
+
+<!-- ── Tu día ───────────────────────────────────────────────────────────── -->
+<div class="fila sep" style="margin:22px 0 10px">
+  <h2 class="seccion" style="margin:0">Tu día ({{ horasAgendadas() }} h agendadas)</h2>
+  <a class="chico" routerLink="/agenda">Ver la semana</a>
+</div>
+
+@if (eventos().length) {
+  <div class="tarjeta dia-lista">
+    @for (e of eventos(); track e.id) {
+      <div class="ev">
+        <span class="franja" [style.background]="colorEvento(e)"></span>
+        <span class="hora tabular">{{ e.hora }}</span>
+        <span class="crece">
+          <span>{{ e.titulo }}</span>
+          <span class="mini"> · {{ e.minutos }} min@if (e.con) { · {{ e.con }} }</span>
+        </span>
+      </div>
+    }
+  </div>
+} @else {
+  <div class="tarjeta">
+    <div class="fila sep">
+      <span class="chico crece">Sin nada agendado hoy.</span>
+      <a class="btn chico" routerLink="/agenda">Agendar</a>
     </div>
   </div>
 }
@@ -162,6 +202,12 @@
     <textarea placeholder="¿Qué te comió más horas hoy?" enterkeyhint="done"
               [value]="texto()" (input)="texto.set($any($event.target).value)"
               aria-label="Qué te comió más horas hoy"></textarea>
+    @if (eventos().length) {
+      <p class="mini" style="margin:8px 0 0">
+        Hoy tenías agendado: {{ eventos()[0].titulo }}@if (eventos().length > 1) { y {{ eventos().length - 1 }} cosa(s) más }.
+        Es solo para acordarte: escribí lo que <em>pasó</em>, no lo que estaba planificado.
+      </p>
+    }
     <div class="btn-fila" style="margin-top:10px">
       <button class="btn primario crece" type="button" (click)="abrirEditor()">Guardar</button>
       @if (puedeDictar) {

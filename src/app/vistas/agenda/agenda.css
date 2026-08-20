@@ -1,0 +1,35 @@
+.nav { margin-bottom: 14px; }
+.rotulo { font-size: 12.5px; color: var(--tinta-2); margin-bottom: 2px; }
+.cifra { font-size: 28px; font-weight: 680; line-height: 1.1; letter-spacing: -.02em; }
+
+.semana { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.dia {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 9px 2px 8px;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: var(--superficie);
+  color: inherit;
+  cursor: pointer;
+  min-height: 62px;
+}
+.dia.abierto { border-color: var(--acento); background: var(--superficie-2); }
+.dia.hoy .num { color: var(--acento); font-weight: 720; }
+.dia .letra { font-size: 10.5px; color: var(--tinta-3); text-transform: capitalize; }
+.dia .num { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.dia .puntos { display: flex; gap: 2px; min-height: 6px; }
+.dia .puntos i { width: 5px; height: 5px; border-radius: 50%; display: block; }
+.marca-revision {
+  position: absolute; top: 3px; right: 4px;
+  font-size: 9px; font-weight: 800; color: var(--acento);
+}
+
+.evento { display: flex; gap: 12px; cursor: pointer; padding: 13px 14px; }
+.evento .franja { width: 4px; border-radius: 3px; flex: 0 0 auto; }
+.evento .hora { font-size: 13px; font-weight: 650; }
+.evento .titulo-ev { font-size: 15.5px; margin: 2px 0 1px; }
+.error { color: var(--critico); font-size: 13.5px; margin: 12px 0 0; }

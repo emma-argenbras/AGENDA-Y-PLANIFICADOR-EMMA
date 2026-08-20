@@ -13,9 +13,10 @@ import { Dialogo } from '../../ui/dialogo';
 import { Tema } from '../../ui/tema';
 import { clasificarCheckin, evaluarPrioridad, type Delegacion, type Segmento } from '../../core/clasificador';
 import { CATEGORIAS, CAT, type CategoriaId } from '../../core/reglas';
-import { PRUEBA } from '../../core/prueba-luciana';
 import { esFinDeSemana, fechaCorta, fechaLarga, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
 import { esTuyo, ordenar, type Pendiente } from '../../core/pendientes';
+import { TIPO, aHora, aMinutos, ordenarDia, type Evento } from '../../core/agenda';
+import { PRUEBA, estadoPrueba } from '../../core/prueba-luciana';
 import type { Checkin, Derivacion, Prioridad } from '../../core/modelo';
 
 const MAX = 3;
@@ -59,6 +60,8 @@ export class Hoy {
       racha: await this.datos.rachaSinRegistro(sumarDias(this.hoy, -1)),
       ultimos: await this.#ultimosDias(),
       plan: await this.datos.plan(inicioSemana(this.hoy)),
+      eventos: await this.datos.eventos(this.hoy),
+      prueba: await this.datos.prueba(),
       pendientes: await this.datos.pendientes(),
       reuniones: await this.datos.reuniones(),
     }),
@@ -71,6 +74,31 @@ export class Hoy {
   protected readonly ultimos = computed(() => this.datosDelDia.value()?.ultimos ?? []);
   protected readonly totalHoy = computed(() =>
     (this.checkin()?.segmentos ?? []).reduce((a, s) => a + (s.horas || 0), 0));
+
+  /* ── Tu día ────────────────────────────────────────────────────────────── */
+
+  protected readonly eventos = computed<Evento[]>(() =>
+    ordenarDia(this.datosDelDia.value()?.eventos ?? []));
+
+  protected readonly horasAgendadas = computed(() =>
+    Math.round((this.eventos().reduce((s, e) => s + e.minutos, 0) / 60) * 10) / 10);
+
+  /** Lo que todavía no pasó, que es lo único que sirve mirar a mitad de día. */
+  protected readonly proximos = computed(() => {
+    const ahora = new Date().getHours() * 60 + new Date().getMinutes();
+    return this.eventos().filter(e => aMinutos(e.hora) + e.minutos >= ahora);
+  });
+
+  protected fin(e: Evento): string { return aHora(aMinutos(e.hora) + e.minutos); }
+
+  protected colorEvento(e: Evento): string {
+    const c = CAT[TIPO[e.tipo].categoria];
+    return this.tema.oscuro() ? c.colorOscuro : c.color;
+  }
+
+  /** La prueba salió de las pestañas: si hay algo vencido, se avisa acá. */
+  protected readonly pruebaVencida = computed(() =>
+    estadoPrueba(this.hoy, this.datosDelDia.value()?.prueba ?? {}).vencidas);
 
   /* ── El plan de la semana, atado al día ────────────────────────────────── */
 

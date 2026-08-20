@@ -20,6 +20,7 @@ import {
 } from '../core/modelo';
 import type { RegistrosPrueba } from '../core/prueba-luciana';
 import type { Pendiente, PlanSemana } from '../core/pendientes';
+import type { Evento } from '../core/agenda';
 
 @Injectable({ providedIn: 'root' })
 export class Datos {
@@ -56,6 +57,33 @@ export class Datos {
   async borrar(clave: string): Promise<void> {
     await this.repo.borrar(clave);
     this.#tocar();
+  }
+
+  /* ── Agenda ────────────────────────────────────────────────────────────── */
+
+  async eventos(fecha: string): Promise<Evento[]> {
+    return (await this.repo.leer<Evento[]>(K.agenda(fecha))) ?? [];
+  }
+
+  guardarEventos(fecha: string, es: Evento[]) { return this.escribir(K.agenda(fecha), es); }
+
+  /** Eventos de un rango, con la fecha ya puesta en cada uno. */
+  async eventosEntre(desde: string, hasta: string): Promise<Evento[]> {
+    const filas = await this.repo.rango<Evento[]>(K.agenda(desde), K.agenda(hasta));
+    return filas.flatMap(f => (f.valor ?? []).map(e => ({ ...e, fecha: f.clave.slice('agenda:'.length) })));
+  }
+
+  async agregarEvento(e: Evento): Promise<void> {
+    await this.guardarEventos(e.fecha, [...(await this.eventos(e.fecha)), e]);
+  }
+
+  async actualizarEvento(fecha: string, id: string, cambio: Partial<Evento>): Promise<void> {
+    await this.guardarEventos(fecha,
+      (await this.eventos(fecha)).map(e => (e.id === id ? { ...e, ...cambio } : e)));
+  }
+
+  async borrarEvento(fecha: string, id: string): Promise<void> {
+    await this.guardarEventos(fecha, (await this.eventos(fecha)).filter(e => e.id !== id));
   }
 
   /* ── Cierre de jornada ─────────────────────────────────────────────────── */

@@ -13,7 +13,12 @@ import { K } from './repositorio';
 import type { DocIndexado } from '../core/modelo';
 
 const GIS = 'https://accounts.google.com/gsi/client';
-const ALCANCE = 'https://www.googleapis.com/auth/drive.readonly';
+// Un solo permiso de Google para las dos cosas que la app lee: los documentos
+// de la carpeta y los eventos del calendario. Las dos en modo lectura.
+const ALCANCE = [
+  'https://www.googleapis.com/auth/drive.readonly',
+  'https://www.googleapis.com/auth/calendar.readonly',
+].join(' ');
 const API = 'https://www.googleapis.com/drive/v3';
 
 const EXPORTABLES: Record<string, string> = {

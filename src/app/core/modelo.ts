@@ -64,6 +64,7 @@ export interface Ajustes {
   horasDiaPorDefecto: number;
   primerUso: string | null;
   ultimaSync: number | null;
+  ultimaSyncCalendario: number | null;
   tema: 'auto' | 'claro' | 'oscuro';
 }
 
@@ -76,6 +77,7 @@ export const AJUSTES_POR_DEFECTO: Ajustes = {
   horasDiaPorDefecto: 8,
   primerUso: null,
   ultimaSync: null,
+  ultimaSyncCalendario: null,
   tema: 'auto',
 };
 

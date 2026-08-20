@@ -56,3 +56,16 @@
   border-top: 1px solid var(--linea);
   color: var(--aviso);
 }
+
+.dia-lista .ev {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--linea);
+  font-size: 15px;
+}
+.dia-lista .ev:first-child { border-top: 0; }
+.dia-lista .franja { width: 4px; height: 26px; border-radius: 3px; flex: 0 0 auto; }
+.dia-lista .hora { font-size: 13px; font-weight: 650; color: var(--tinta-2); min-width: 42px; }
+a { color: var(--acento); }

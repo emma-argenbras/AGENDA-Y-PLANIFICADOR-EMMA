@@ -107,3 +107,22 @@ main { padding: 0 16px 28px; max-width: 720px; margin: 0 auto; }
   cursor: pointer;
   white-space: nowrap;
 }
+
+.icono { position: relative; }
+.icono.con-pendiente::after {
+  content: '';
+  position: absolute;
+  top: 2px; right: 2px;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--critico);
+  border: 1.5px solid var(--plano);
+}
+.punto-menu {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--critico);
+  margin-left: 6px;
+  vertical-align: middle;
+}

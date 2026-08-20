@@ -1,0 +1,172 @@
+<div class="fila sep nav">
+  <button class="btn chico" type="button" (click)="mover(-1)">‹ Anterior</button>
+  <span class="chico">
+    {{ esSemanaActual() ? 'Esta semana' : fechaCorta(fechas()[0]) + ' al ' + fechaCorta(fechas()[6]) }}
+  </span>
+  <button class="btn chico" type="button" (click)="mover(1)">Siguiente ›</button>
+</div>
+
+<!-- ── Carga de la semana ───────────────────────────────────────────────── -->
+<div class="tarjeta">
+  <div class="fila sep">
+    <div>
+      <div class="rotulo">Horas agendadas</div>
+      <div class="cifra tabular">{{ horas() }}</div>
+    </div>
+    <div style="text-align:right">
+      <div class="rotulo">Reuniones internas</div>
+      <div class="cifra tabular" [style.color]="aviso() ? 'var(--critico)' : null">{{ porTipo().reunion }}</div>
+    </div>
+  </div>
+  @if (aviso()) {
+    <p class="mini" style="margin:10px 0 0; color:var(--critico)">{{ aviso() }}</p>
+  } @else {
+    <p class="mini" style="margin:10px 0 0">
+      Cliente {{ porTipo().cliente }} h · Bloques {{ porTipo().bloque }} h · Personal {{ porTipo().personal }} h
+    </p>
+  }
+</div>
+
+<!-- ── Los 7 días ───────────────────────────────────────────────────────── -->
+<div class="semana">
+  @for (d of dias(); track d.fecha) {
+    <button class="dia" type="button" [class.hoy]="d.esHoy" [class.abierto]="d.fecha === diaAbierto()"
+            (click)="diaAbierto.set(d.fecha)" [attr.aria-label]="d.etiqueta">
+      <span class="letra">{{ d.corto }}</span>
+      <span class="num">{{ fechaCorta(d.fecha).slice(0, 2) }}</span>
+      <span class="puntos">
+        @for (e of d.eventos.slice(0, 4); track e.id) {
+          <i [style.background]="color(e)"></i>
+        }
+      </span>
+      @if (d.revision) { <span class="marca-revision" title="Revisión de Luciana">L</span> }
+    </button>
+  }
+</div>
+
+<!-- ── El día elegido ───────────────────────────────────────────────────── -->
+@if (diaSeleccionado(); as d) {
+  <div class="fila sep" style="margin:18px 0 10px">
+    <h2 class="seccion" style="margin:0">{{ d.etiqueta }}</h2>
+    <span class="chico tabular">{{ d.horas }} h</span>
+  </div>
+
+  @if (d.revision) {
+    <div class="tarjeta">
+      <div class="fila sep">
+        <div class="crece">
+          <span class="fuerte">Revisión de Luciana</span>
+          <div class="mini">15 minutos. Está en el acuerdo, no hace falta agendarla.</div>
+        </div>
+        <a class="btn chico primario" routerLink="/prueba">Registrar</a>
+      </div>
+    </div>
+  }
+
+  @if (!d.eventos.length) {
+    <div class="tarjeta">
+      <div class="vacio">
+        <div class="titulo">Día libre</div>
+        <div class="chico">Aprovechalo para un bloque de estrategia, que es lo que menos aparece.</div>
+      </div>
+    </div>
+  }
+
+  @for (e of d.eventos; track e.id) {
+    <div class="tarjeta evento" [class.alerta]="choca(e)" (click)="abrir(e)">
+      <span class="franja" [style.background]="color(e)"></span>
+      <div class="crece">
+        <div class="fila sep">
+          <span class="hora tabular">{{ e.hora }}–{{ fin(e) }}</span>
+          <span class="mini">{{ e.minutos }} min</span>
+        </div>
+        <div class="titulo-ev">{{ e.titulo }}</div>
+        <div class="mini">
+          {{ e.tipo === 'reunion' ? 'Reunión interna' : e.tipo === 'cliente' ? 'Cliente o proveedor' : e.tipo === 'bloque' ? 'Bloque de trabajo' : 'Personal' }}
+          @if (e.con) { · con {{ e.con }} }
+          @if (e.origen === 'google') { · de Google Calendar }
+          @if (choca(e)) { · <span style="color:var(--critico)">se pisa con otro</span> }
+        </div>
+        @if (e.tipo === 'reunion' && !e.reunionId) {
+          <button class="btn chico" type="button" style="margin-top:10px"
+                  (click)="$event.stopPropagation(); aActas(e)">Cerrar con acta</button>
+        }
+        @if (e.reunionId) {
+          <div class="mini" style="margin-top:6px">✓ Ya está en Actas</div>
+        }
+      </div>
+    </div>
+  }
+
+  <button class="btn primario ancho" type="button" (click)="nuevo(d.fecha)">+ Agregar al {{ diaCorto(d.fecha) }}</button>
+}
+
+<!-- ── Google Calendar ──────────────────────────────────────────────────── -->
+<h2 class="seccion">Google Calendar</h2>
+<div class="tarjeta">
+  <div class="fila sep">
+    <div class="crece">
+      <span class="fuerte">Traer lo que agendaron otros</span>
+      <div class="mini">
+        @if (ultimaSync()) { Última vez: {{ ultimaSync() }} } @else { Nunca importado. }
+        Se trae en solo lectura y no toca lo que creaste acá.
+      </div>
+    </div>
+    <button class="btn chico" type="button" [disabled]="calendario.importando()" (click)="importar()">
+      {{ calendario.importando() ? 'Trayendo…' : 'Importar semana' }}
+    </button>
+  </div>
+  @if (errorImport()) { <p class="error">{{ errorImport() }}</p> }
+</div>
+
+<!-- ── Alta / edición ───────────────────────────────────────────────────── -->
+<app-dialogo [abierto]="!!editando()" [titulo]="esNuevo() ? 'Nuevo evento' : 'Editar evento'"
+             (cerrar)="editando.set(null)">
+  @if (editando(); as e) {
+    <label class="campo">
+      <span>Qué</span>
+      <input type="text" placeholder="Directorio, meet con Ruiz, bloque de precios…"
+             [value]="e.titulo" (input)="campo('titulo', $any($event.target).value)">
+    </label>
+
+    <div class="chips" style="margin-bottom:14px">
+      @for (t of tipos; track t.id) {
+        <button class="chip" type="button" [class.activo]="e.tipo === t.id"
+                (click)="campo('tipo', t.id)">{{ t.nombre }}</button>
+      }
+    </div>
+
+    <div class="fila" style="gap:12px; margin-bottom:14px">
+      <label class="campo crece" style="margin:0">
+        <span>Día</span>
+        <input type="date" [value]="e.fecha" (input)="campo('fecha', $any($event.target).value)">
+      </label>
+      <label class="campo crece" style="margin:0">
+        <span>Hora</span>
+        <input type="time" [value]="e.hora" (input)="campo('hora', $any($event.target).value)">
+      </label>
+    </div>
+
+    <div class="rotulo" style="margin-bottom:6px">Cuánto dura</div>
+    <div class="chips" style="margin-bottom:14px">
+      @for (d of duraciones; track d) {
+        <button class="chip" type="button" [class.activo]="e.minutos === d"
+                (click)="campo('minutos', d)">{{ d < 60 ? d + ' min' : (d / 60) + ' h' }}</button>
+      }
+    </div>
+
+    <label class="campo">
+      <span>Con quién (opcional)</span>
+      <input type="text" [value]="e.con ?? ''" (input)="campo('con', $any($event.target).value)">
+    </label>
+
+    @if (bloqueoTexto()) {
+      <p class="error">{{ bloqueoTexto() }}</p>
+    }
+  }
+  <button pie class="btn primario" type="button" (click)="guardar()">Guardar</button>
+  @if (!esNuevo()) {
+    <button pie class="btn peligro" type="button" (click)="borrar()">Borrar</button>
+  }
+  <button pie class="btn" type="button" (click)="editando.set(null)">Cancelar</button>
+</app-dialogo>

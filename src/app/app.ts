@@ -25,9 +25,9 @@ export class App {
 
   protected readonly tabs: Tab[] = [
     { ruta: '/hoy', texto: 'Hoy', icono: 'M12 3v18M3 12h18' },
+    { ruta: '/agenda', texto: 'Agenda', icono: 'M4 5h16v15H4zM4 9h16M9 5V3M15 5V3M8 13h3M8 17h6' },
     { ruta: '/pendientes', texto: 'Pendientes', icono: 'M4 6h16M4 12h16M4 18h9M20 17l-3 3-1.6-1.6' },
-    { ruta: '/semana', texto: 'Semana', icono: 'M4 5h16v15H4zM4 9h16M9 5V3M15 5V3' },
-    { ruta: '/prueba', texto: 'Prueba', icono: 'M12 3a9 9 0 1 0 0 18zM12 3a9 9 0 0 1 0 18' },
+    { ruta: '/semana', texto: 'Semana', icono: 'M4 19V9M9 19V5M14 19v-7M19 19v-4M3 19h18' },
     { ruta: '/actas', texto: 'Actas', icono: 'M5 4h14v16H5zM8 9h8M8 13h8M8 17h5' },
   ];
 
@@ -63,10 +63,11 @@ export class App {
 
   protected marca(ruta: string): boolean {
     const m = this.marcas();
-    return (ruta === '/prueba' && m.prueba)
-        || (ruta === '/actas' && m.actas)
-        || (ruta === '/pendientes' && m.pendientes);
+    return (ruta === '/actas' && m.actas) || (ruta === '/pendientes' && m.pendientes);
   }
+
+  /** La prueba vive en el menú ⋯: si tiene algo pendiente, el botón lo avisa. */
+  protected readonly marcaMenu = computed(() => this.marcas().prueba);
 
   protected cerrarMenu(): void { this.menuAbierto.set(false); }
 }

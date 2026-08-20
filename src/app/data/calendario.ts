@@ -1,0 +1,132 @@
+/**
+ * calendario.ts — Traer de Google Calendar lo que agendan otros.
+ *
+ * Solo lectura, y el mismo permiso de Google que ya usa Drive. Sirve para que
+ * las reuniones que te ponen clientes o el equipo aparezcan al lado de tus
+ * prioridades, sin tener que abrir otra app.
+ *
+ * Lo importado no se edita acá: se marca con su origen y, si querés cambiarlo,
+ * lo cambiás donde nació. Lo que creás vos vive solo en esta app.
+ */
+
+import { Injectable, inject, signal } from '@angular/core';
+import { Datos } from './datos';
+import { Drive } from './drive';
+import { aHora, aMinutos, type Evento, type TipoEvento } from '../core/agenda';
+
+const API = 'https://www.googleapis.com/calendar/v3';
+
+interface EventoGoogle {
+  id: string;
+  summary?: string;
+  description?: string;
+  location?: string;
+  status?: string;
+  start?: { dateTime?: string; date?: string };
+  end?: { dateTime?: string; date?: string };
+  attendees?: { email?: string; displayName?: string; self?: boolean }[];
+  organizer?: { email?: string; displayName?: string; self?: boolean };
+}
+
+@Injectable({ providedIn: 'root' })
+export class Calendario {
+  private readonly datos = inject(Datos);
+  private readonly drive = inject(Drive);
+
+  readonly importando = signal(false);
+
+  /**
+   * Trae los eventos de un rango y los mezcla con lo que ya está guardado.
+   * Lo tuyo nunca se pisa: solo se reemplaza lo que vino de Google antes.
+   */
+  async importar(desdeISO: string, hastaISO: string): Promise<number> {
+    this.importando.set(true);
+    try {
+      const token = await this.drive.conectar();
+      const url = `${API}/calendars/primary/events`
+        + `?timeMin=${encodeURIComponent(desdeISO + 'T00:00:00-03:00')}`
+        + `&timeMax=${encodeURIComponent(hastaISO + 'T23:59:59-03:00')}`
+        + '&singleEvents=true&orderBy=startTime&maxResults=250';
+      const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+      if (r.status === 401 || r.status === 403) {
+        throw new Error('Google rechazó el permiso de Calendar. Revisá que la API esté activada '
+          + 'y volvé a conectar desde Ajustes para que te pida el permiso nuevo.');
+      }
+      if (!r.ok) throw new Error(`Calendar respondió ${r.status}.`);
+
+      const data = await r.json() as { items?: EventoGoogle[] };
+      const porFecha = new Map<string, Evento[]>();
+      for (const g of data.items ?? []) {
+        const e = convertir(g);
+        if (!e) continue;
+        porFecha.set(e.fecha, [...(porFecha.get(e.fecha) ?? []), e]);
+      }
+
+      let total = 0;
+      const fechas = new Set([...porFecha.keys(), ...fechasEntre(desdeISO, hastaISO)]);
+      for (const fecha of fechas) {
+        const previos = await this.datos.eventos(fecha);
+        const mios = previos.filter(e => e.origen !== 'google');
+        const deGoogle = porFecha.get(fecha) ?? [];
+        // Si ya lo habías cerrado con acta, se respeta ese vínculo.
+        const conVinculos = deGoogle.map(e => {
+          const antes = previos.find(p => p.googleId === e.googleId);
+          return antes?.reunionId ? { ...e, reunionId: antes.reunionId } : e;
+        });
+        if (!mios.length && !conVinculos.length && !previos.length) continue;
+        await this.datos.guardarEventos(fecha, [...mios, ...conVinculos]);
+        total += conVinculos.length;
+      }
+      await this.datos.guardarAjustes({ ultimaSyncCalendario: Date.now() });
+      return total;
+    } finally {
+      this.importando.set(false);
+    }
+  }
+}
+
+function fechasEntre(desde: string, hasta: string): string[] {
+  const out: string[] = [];
+  const d = new Date(desde + 'T12:00:00');
+  const fin = new Date(hasta + 'T12:00:00');
+  while (d <= fin) {
+    out.push(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10));
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
+
+/** Un evento de Google en el formato de la app. Los de todo el día se ignoran. */
+function convertir(g: EventoGoogle): Evento | null {
+  if (g.status === 'cancelled' || !g.start?.dateTime || !g.end?.dateTime) return null;
+  const inicio = new Date(g.start.dateTime);
+  const fin = new Date(g.end.dateTime);
+  const local = new Date(inicio.getTime() - inicio.getTimezoneOffset() * 60000);
+  const minutos = Math.max(15, Math.round((fin.getTime() - inicio.getTime()) / 60000));
+  const invitados = (g.attendees ?? []).filter(a => !a.self);
+
+  return {
+    id: 'g:' + g.id,
+    googleId: g.id,
+    fecha: local.toISOString().slice(0, 10),
+    hora: aHora(aMinutos(local.toISOString().slice(11, 16))),
+    minutos,
+    titulo: g.summary?.trim() || '(sin título)',
+    tipo: adivinarTipo(g),
+    con: invitados.map(a => a.displayName || a.email).filter(Boolean).slice(0, 3).join(', ') || undefined,
+    nota: g.location?.trim() || undefined,
+    origen: 'google',
+  };
+}
+
+/**
+ * Con quién estás dice bastante: si hay gente de afuera, es cliente; si son
+ * todos de la casa, es reunión interna. No siempre acierta y se puede corregir.
+ */
+function adivinarTipo(g: EventoGoogle): TipoEvento {
+  const invitados = (g.attendees ?? []).filter(a => !a.self);
+  if (!invitados.length) return 'bloque';
+  const propio = (g.organizer?.email ?? '').split('@')[1] ?? '';
+  const deAfuera = invitados.some(a => (a.email ?? '').split('@')[1] !== propio);
+  return deAfuera ? 'cliente' : 'reunion';
+}
