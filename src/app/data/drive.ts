@@ -61,7 +61,7 @@ export class Drive {
   async conectado(): Promise<boolean> { return (await this.#token()) !== null; }
 
   async #token(): Promise<string | null> {
-    const t = await this.datos.repo.leer<Token>(K.driveToken);
+    const t = await this.datos.tokenGoogle<Token>();
     return t && t.expira > Date.now() + 60_000 ? t.access_token : null;
   }
 
@@ -93,7 +93,7 @@ export class Drive {
         prompt: '',
         callback: async r => {
           if (r.error || !r.access_token) return reject(new Error(traducir(r.error)));
-          await this.datos.repo.escribir<Token>(K.driveToken, {
+          await this.datos.guardarTokenGoogle<Token>({
             access_token: r.access_token,
             expira: Date.now() + (Number(r.expires_in ?? 3600) - 60) * 1000,
           });
@@ -106,17 +106,17 @@ export class Drive {
   }
 
   async desconectar(): Promise<void> {
-    const t = await this.datos.repo.leer<Token>(K.driveToken);
+    const t = await this.datos.tokenGoogle<Token>();
     const google = (window as unknown as { google?: GoogleGis }).google;
     if (t?.access_token && google) { try { google.accounts.oauth2.revoke(t.access_token); } catch { /* ya vencido */ } }
-    await this.datos.repo.borrar(K.driveToken);
+    await this.datos.borrarTokenGoogle();
   }
 
   async #api(url: string): Promise<Response> {
     const token = (await this.#token()) ?? (await this.conectar());
     const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
     if (r.status === 401) {
-      await this.datos.repo.borrar(K.driveToken);
+      await this.datos.borrarTokenGoogle();
       throw new Error('La sesión de Google venció. Volvé a conectar.');
     }
     if (!r.ok) throw new Error(`Drive respondió ${r.status}: ${(await r.text()).slice(0, 160)}`);

@@ -175,6 +175,16 @@ export class Datos {
 
   async docsIndice(): Promise<DocIndexado[]> { return (await this.repo.leer<DocIndexado[]>(K.docsIndice)) ?? []; }
   guardarDocsIndice(d: DocIndexado[]) { return this.escribir(K.docsIndice, d); }
+  /**
+   * El permiso de Google (Drive y Calendar) NUNCA sale de este dispositivo.
+   * Guardarlo en la nube sería subir a una base una llave que abre tu Drive:
+   * aunque las reglas la protejan, el token no tiene por qué viajar. Además se
+   * vence en una hora y se vuelve a pedir solo, así que no hay nada que ganar.
+   */
+  tokenGoogle<T>() { return this.local.leer<T>(K.driveToken); }
+  guardarTokenGoogle<T>(t: T) { return this.local.escribir(K.driveToken, t); }
+  borrarTokenGoogle() { return this.local.borrar(K.driveToken); }
+
   /** El texto de los documentos siempre queda local: es mucho volumen y se re-baja. */
   doc(id: string) { return this.local.leer<string>(K.doc(id)); }
   guardarDoc(id: string, texto: string) { return this.local.escribir(K.doc(id), texto); }

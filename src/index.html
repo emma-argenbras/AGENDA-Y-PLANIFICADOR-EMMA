@@ -5,6 +5,25 @@
     <title>Agenda EVB</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!--
+      Política de contenido: la app solo puede cargar código de sí misma y
+      hablar con Google. Si algún día se colara un script ajeno, el navegador
+      lo bloquea antes de que corra. GitHub Pages no deja mandar cabeceras, así
+      que va acá; por eso tampoco se puede usar frame-ancestors, que solo vale
+      como cabecera.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://*.gstatic.com;
+      style-src 'self' 'unsafe-inline';
+      img-src 'self' data: blob: https://*.googleusercontent.com https://*.gstatic.com;
+      font-src 'self' data:;
+      connect-src 'self' https://*.googleapis.com https://*.google.com https://*.firebaseio.com https://*.firebaseapp.com https://*.cloudfunctions.net wss://*.firebaseio.com;
+      frame-src https://accounts.google.com https://*.firebaseapp.com;
+      worker-src 'self';
+      base-uri 'self';
+      object-src 'none';
+      form-action 'none'">
     <meta name="description" content="Agenda, planificador y asistente de trabajo con la Ficha de Rol aplicada automáticamente." />
     <meta name="theme-color" content="#f9f9f7" />
     <meta name="apple-mobile-web-app-capable" content="yes" />

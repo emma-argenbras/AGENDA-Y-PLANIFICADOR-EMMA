@@ -110,10 +110,20 @@ export class Actualizador {
     this.estado.set('buscando');
     this.detalle.set('Bajando la app de nuevo…');
     try {
+      // Solo lo de esta app. En GitHub Pages todos los proyectos comparten
+      // dirección, así que barrer todo se llevaría puesto lo de al lado.
+      const base = document.baseURI;
+      const ruta = new URL(base).pathname;
+
       const regs = (await navigator.serviceWorker?.getRegistrations?.()) ?? [];
-      for (const r of regs) await r.unregister();
+      for (const r of regs) {
+        if (base.startsWith(r.scope)) await r.unregister();
+      }
+
       if ('caches' in window) {
-        for (const k of await caches.keys()) await caches.delete(k);
+        for (const k of await caches.keys()) {
+          if (k.includes(ruta) || (ruta === '/' && k.startsWith('ngsw'))) await caches.delete(k);
+        }
       }
     } catch { /* seguimos igual: la recarga hace el resto */ }
     location.reload();
