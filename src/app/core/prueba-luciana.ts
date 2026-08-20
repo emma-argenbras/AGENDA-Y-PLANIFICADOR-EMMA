@@ -98,8 +98,8 @@ export const PRUEBA = {
  * Estado de la prueba según la fecha de hoy y lo registrado.
  * Nunca devuelve vacío: si no hay datos, dice exactamente eso.
  */
-export function estadoPrueba(hoyISO: string, registros: RegistrosPrueba = {}) {
-  const revisiones = PRUEBA.revisiones.map(fecha => {
+export function estadoPrueba(hoyISO: string, registros: RegistrosPrueba = {}, prueba = PRUEBA) {
+  const revisiones = prueba.revisiones.map(fecha => {
     const reg = registros[fecha];
     let estado: 'hecha' | 'vencida' | 'hoy' | 'pendiente';
     if (reg) estado = 'hecha';
@@ -128,8 +128,8 @@ export function estadoPrueba(hoyISO: string, registros: RegistrosPrueba = {}) {
     hechas: hechas.length,
     vencidas: vencidas.length,
     mejoras,
-    objetivoMejoras: PRUEBA.objetivoMejoras,
-    diasParaDecision: diasEntre(hoyISO, PRUEBA.decision),
+    objetivoMejoras: prueba.objetivoMejoras,
+    diasParaDecision: diasEntre(hoyISO, prueba.decision),
     riesgo,
     cerrada: Boolean(registros.__cierre),
     cierre: registros.__cierre || null

@@ -19,7 +19,7 @@ import {
 import { CAT } from '../../core/reglas';
 import { evaluarPrioridad } from '../../core/clasificador';
 import { diaCorto, diasSemana, fechaCorta, fechaLarga, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
-import { PRUEBA } from '../../core/prueba-luciana';
+import { PRUEBAS, pruebasConRevision } from '../../core/pruebas';
 
 @Component({
   selector: 'app-agenda',
@@ -53,6 +53,7 @@ export class Agenda {
       ajustes: await this.datos.ajustes(),
       prioridades: await this.datos.prioridades(this.hoy),
       pendientes: (await this.datos.pendientes()).filter(x => x.estado === 'abierto').slice(0, 6),
+      cierres: await this.datos.cierresDePruebas(PRUEBAS.map(p => p.id)),
     }),
   });
 
@@ -75,7 +76,7 @@ export class Agenda {
       esHoy: fecha === this.hoy,
       eventos: del,
       horas: horasDe(del),
-      revision: PRUEBA.revisiones.includes(fecha),
+      revision: pruebasConRevision(fecha, this.datosSemana.value()?.cierres ?? {}).length > 0,
     };
   }));
 

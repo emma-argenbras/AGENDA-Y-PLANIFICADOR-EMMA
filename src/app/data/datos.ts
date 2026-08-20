@@ -161,8 +161,17 @@ export class Datos {
 
   /* ── Prueba de Luciana ─────────────────────────────────────────────────── */
 
-  async prueba(): Promise<RegistrosPrueba> { return (await this.repo.leer<RegistrosPrueba>(K.prueba)) ?? {}; }
-  guardarPrueba(p: RegistrosPrueba) { return this.escribir(K.prueba, p); }
+  async prueba(id = 'luciana_2026_08'): Promise<RegistrosPrueba> {
+    return (await this.repo.leer<RegistrosPrueba>(K.prueba(id))) ?? {};
+  }
+  guardarPrueba(p: RegistrosPrueba, id = 'luciana_2026_08') { return this.escribir(K.prueba(id), p); }
+
+  /** Qué pruebas de rol ya tienen la decisión tomada. */
+  async cierresDePruebas(ids: readonly string[]): Promise<Record<string, boolean>> {
+    const out: Record<string, boolean> = {};
+    for (const id of ids) out[id] = Boolean((await this.prueba(id)).__cierre);
+    return out;
+  }
 
   /* ── Indicadores ───────────────────────────────────────────────────────── */
 

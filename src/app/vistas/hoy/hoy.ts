@@ -16,7 +16,8 @@ import { CATEGORIAS, CAT, type CategoriaId } from '../../core/reglas';
 import { esFinDeSemana, fechaCorta, fechaLarga, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
 import { esTuyo, ordenar, type Pendiente } from '../../core/pendientes';
 import { TIPO, aHora, aMinutos, ordenarDia, type Evento } from '../../core/agenda';
-import { PRUEBA, estadoPrueba } from '../../core/prueba-luciana';
+import { estadoPrueba } from '../../core/prueba-luciana';
+import { PRUEBAS, pruebaActiva, pruebasConRevision } from '../../core/pruebas';
 import { estadoSemanal } from '../../core/semana';
 import type { Checkin, Derivacion, Prioridad } from '../../core/modelo';
 
@@ -45,7 +46,9 @@ export class Hoy {
   protected readonly hoy = hoyISO();
   protected readonly fechaLarga = fechaLarga(this.hoy);
   protected readonly categorias = CATEGORIAS;
-  protected readonly hayRevisionHoy = PRUEBA.revisiones.includes(this.hoy);
+  /** Revisión de una prueba en curso que cae hoy, si hay alguna. */
+  protected readonly revisionHoy = computed(() =>
+    pruebasConRevision(this.hoy, this.datosDelDia.value()?.cierres ?? {})[0] ?? null);
 
   protected readonly texto = signal('');
   protected readonly dictando = signal(false);
@@ -62,7 +65,7 @@ export class Hoy {
       ultimos: await this.#ultimosDias(),
       plan: await this.datos.plan(inicioSemana(this.hoy)),
       eventos: await this.datos.eventos(this.hoy),
-      prueba: await this.datos.prueba(),
+      cierres: await this.datos.cierresDePruebas(PRUEBAS.map(p => p.id)),
       planProximo: await this.datos.plan(sumarDias(inicioSemana(this.hoy), 7)),
       pendientes: await this.datos.pendientes(),
       reuniones: await this.datos.reuniones(),
@@ -99,8 +102,19 @@ export class Hoy {
   }
 
   /** La prueba salió de las pestañas: si hay algo vencido, se avisa acá. */
-  protected readonly pruebaVencida = computed(() =>
-    estadoPrueba(this.hoy, this.datosDelDia.value()?.prueba ?? {}).vencidas);
+  private readonly registrosActiva = resource({
+    params: () => ({ v: this.datos.cambios() }),
+    loader: async () => {
+      const cierres = await this.datos.cierresDePruebas(PRUEBAS.map(p => p.id));
+      const activa = pruebaActiva(cierres);
+      return activa ? { activa, registros: await this.datos.prueba(activa.id) } : null;
+    },
+  });
+
+  protected readonly pruebaVencida = computed(() => {
+    const r = this.registrosActiva.value();
+    return r ? estadoPrueba(this.hoy, r.registros, r.activa).vencidas : 0;
+  });
 
   /** Viernes o domingo: la app te lleva al ritual semanal en vez de esperarte. */
   protected readonly ritual = computed(() => estadoSemanal(

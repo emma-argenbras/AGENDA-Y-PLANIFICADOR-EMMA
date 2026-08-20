@@ -28,7 +28,7 @@ justamente porque si dependiera de eso no se iba a actualizar nunca.
 | **⋯ → Ficha de Rol** | Las 7 decisiones, la tabla de delegación y las 5 reglas, solo lectura. |
 | **⋯ → Cerrar y armar la semana** | El ritual de viernes y domingo, en tres pasos: cerrás la que termina, mirás los números y elegís los 3 objetivos de la que viene. |
 | **⋯ → Cómo se usa** | El instructivo, adentro de la app: dónde va cada cosa, los tres momentos del día, los viernes, y qué hacer cuando la app te frena. |
-| **⋯ → Prueba** | La prueba de Luciana: revisiones de viernes y decisión del 05/09. |
+| **⋯ → Prueba** | La prueba de rol en curso (hoy: Luciana). Cuando se decide, queda archivada; una prueba nueva se agrega en `core/pruebas.ts` con un commit. |
 | **⋯ → Documentos** | La carpeta de Drive indexada. |
 
 ### El circuito
@@ -196,7 +196,7 @@ el permiso de nuevo: ahora incluye el calendario.
 ```bash
 npm install
 npm start                      # http://localhost:4200
-npm test                       # 47 tests de las reglas de negocio (vitest)
+npm test                       # 52 tests de las reglas de negocio (vitest)
 npm run build                  # build de producción
 npm run servir:dist            # sirve el build en :8099
 npm i -D playwright && npm run test:e2e   # 33 verificaciones en un navegador real
@@ -222,7 +222,8 @@ botón para instalarla.
 ```
 src/app/core/reglas.ts          ★ Secciones 3.1 a 3.7: decisiones propias, tabla de delegación,
                                   8 categorías, 4 umbrales, 5 reglas, 3 indicadores
-src/app/core/prueba-luciana.ts  ★ Sección 4: prueba, revisiones, señales, salidas
+src/app/core/prueba-luciana.ts  ★ Sección 4: la prueba de Luciana (la primera instancia)
+src/app/core/pruebas.ts         ★ El registro de pruebas de rol: activa, archivadas, revisiones
 src/app/core/agenda.ts          ★ Reglas de la agenda: tipos, solapamientos, carga de la semana
 src/app/core/semana.ts          ★ El ritual semanal: cuándo toca cerrar y cuándo armar
 src/app/core/pendientes.ts      ★ Reglas de la bandeja y del plan: tope, caducidad, orden

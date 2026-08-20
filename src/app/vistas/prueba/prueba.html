@@ -1,5 +1,6 @@
 <p class="chico" style="margin:0 0 14px">
-  {{ fechaCorta(P.inicio) }} al {{ fechaCorta(P.fin) }} · decisión {{ fechaCorta(P.decision) }} en {{ P.decisionDonde }}
+  {{ P().persona }} · {{ fechaCorta(P().inicio) }} al {{ fechaCorta(P().fin) }} ·
+  decisión {{ fechaCorta(P().decision) }} en {{ P().decisionDonde }}
 </p>
 
 <div class="tiles">
@@ -21,7 +22,7 @@
   <div class="tarjeta alerta">
     <h2>Prueba en riesgo</h2>
     <p style="margin:0 0 6px">{{ r.texto }}</p>
-    <p class="mini" style="margin:0">{{ P.reglaCancelacion }}</p>
+    <p class="mini" style="margin:0">{{ P().reglaCancelacion }}</p>
   </div>
 }
 
@@ -62,13 +63,13 @@
 <h2 class="seccion">El encargo</h2>
 <div class="tarjeta">
   <h3>Hace</h3>
-  <ul class="limpia">@for (x of P.encargo; track x) { <li>{{ x }}</li> }</ul>
+  <ul class="limpia">@for (x of P().encargo; track x) { <li>{{ x }}</li> }</ul>
   <h3 style="margin-top:14px">No hace</h3>
-  <ul class="limpia">@for (x of P.noHace; track x) { <li class="chico">{{ x }}</li> }</ul>
+  <ul class="limpia">@for (x of P().noHace; track x) { <li class="chico">{{ x }}</li> }</ul>
 </div>
 
-<h2 class="seccion">Las 3 salidas del {{ fechaCorta(P.decision) }}</h2>
-@for (s of P.salidas; track s.id) {
+<h2 class="seccion">Las 3 salidas del {{ fechaCorta(P().decision) }}</h2>
+@for (s of P().salidas; track s.id) {
   <div class="tarjeta" [style.border-color]="cierre()?.salida === s.id ? 'var(--bien)' : null">
     <div class="fila sep">
       <div class="crece">
@@ -84,7 +85,7 @@
 }
 
 <h2 class="seccion">Pendiente sin resolver</h2>
-@for (p of P.pendientes; track p.id) {
+@for (p of P().pendientes; track p.id) {
   <div class="tarjeta">
     <p style="margin:0 0 4px">{{ p.texto }}</p>
     <p class="mini" style="margin:0 0 10px">Recomendado: {{ p.recomendado }}. {{ p.nota }}</p>
@@ -100,7 +101,7 @@
 <!-- ── Registrar revisión ───────────────────────────────────────────────── -->
 <app-dialogo [abierto]="!!editando()" [titulo]="'Revisión ' + (editando() ? fechaCorta(editando()!) : '')"
              bajada="15 minutos. Las señales son estas y no otras." (cerrar)="editando.set(null)">
-  @for (s of P.senales; track s.id) {
+  @for (s of P().senales; track s.id) {
     <div class="senal" [class.destacada]="!!s.destacada">
       <div>{{ s.pregunta }}</div>
       @if (s.ayuda) { <div class="mini">{{ s.ayuda }}</div> }
@@ -147,3 +148,24 @@
   <button pie class="btn primario" type="button" (click)="confirmarSalida()">Confirmar decisión</button>
   <button pie class="btn" type="button" (click)="eligiendo.set(null)">Cancelar</button>
 </app-dialogo>
+
+@if (archivadas().length) {
+  <h2 class="seccion">Pruebas anteriores</h2>
+  <div class="tarjeta">
+    <ul class="limpia">
+      @for (a of archivadas(); track a.id) {
+        <li class="chico">{{ a.persona }} · {{ fechaCorta(a.inicio) }} al {{ fechaCorta(a.fin) }} · decidida</li>
+      }
+    </ul>
+  </div>
+}
+
+@if (cierre()) {
+  <div class="tarjeta">
+    <p class="mini" style="margin:0">
+      Esta prueba ya está decidida y queda como archivo. Para poner a prueba a otra persona se
+      agrega una entrada en el código (core/pruebas.ts), con su encargo, sus revisiones y sus
+      salidas: un commit, como toda regla de este proyecto.
+    </p>
+  </div>
+}

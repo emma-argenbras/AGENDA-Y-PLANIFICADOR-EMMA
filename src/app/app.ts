@@ -6,6 +6,7 @@ import { Datos } from './data/datos';
 import { Avisos } from './ui/avisos';
 import { Actualizador } from './data/actualizador';
 import { estadoPrueba } from './core/prueba-luciana';
+import { PRUEBAS, pruebaActiva } from './core/pruebas';
 import { hoyISO } from './core/fechas';
 import { resumen } from './core/pendientes';
 
@@ -46,12 +47,16 @@ export class App {
     params: () => ({ v: this.datos.cambios() }),
     loader: async () => {
       const hoy = hoyISO();
-      const [prueba, reuniones, pendientes] = await Promise.all([
-        this.datos.prueba(), this.datos.reuniones(), this.datos.pendientes(),
+      const [cierres, reuniones, pendientes] = await Promise.all([
+        this.datos.cierresDePruebas(PRUEBAS.map(p => p.id)),
+        this.datos.reuniones(),
+        this.datos.pendientes(),
       ]);
-      const e = estadoPrueba(hoy, prueba);
+      // Una prueba ya decidida no reclama nada: el punto rojo es de las vivas.
+      const activa = pruebaActiva(cierres);
+      const e = activa ? estadoPrueba(hoy, await this.datos.prueba(activa.id), activa) : null;
       return {
-        prueba: e.vencidas > 0 || e.revisiones.some(r => r.estado === 'hoy'),
+        prueba: Boolean(e && (e.vencidas > 0 || e.revisiones.some(r => r.estado === 'hoy'))),
         actas: reuniones.some(r => !r.acta?.length),
         pendientes: resumen(pendientes, hoy).estancados > 0,
       };

@@ -24,11 +24,11 @@
   </a>
 }
 
-@if (pruebaVencida() && !hayRevisionHoy) {
+@if (pruebaVencida() && !revisionHoy()) {
   <div class="tarjeta alerta">
     <div class="fila sep">
       <div class="crece">
-        <span class="fuerte">{{ pruebaVencida() }} revisión(es) de Luciana sin registrar</span>
+        <span class="fuerte">{{ pruebaVencida() }} revisión(es) de la prueba sin registrar</span>
         <div class="mini">Si las revisiones no se hacen, la prueba se cancela.</div>
       </div>
       <a class="btn chico primario" routerLink="/prueba">Ir</a>
@@ -36,11 +36,11 @@
   </div>
 }
 
-@if (hayRevisionHoy) {
+@if (revisionHoy(); as r) {
   <div class="tarjeta">
     <div class="fila sep">
       <div class="crece">
-        <h2 style="margin:0">Hoy toca revisión de Luciana</h2>
+        <h2 style="margin:0">Hoy toca revisión de {{ r.persona.split(' ')[0] }}</h2>
         <p class="mini" style="margin:2px 0 0">15 minutos. Si las revisiones no se hacen, la prueba se cancela.</p>
       </div>
       <a class="btn primario chico" routerLink="/prueba">Registrar</a>

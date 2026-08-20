@@ -31,7 +31,7 @@ export const K = {
   pendientes: 'pendientes',
   plan: (lunes: string) => `plan:${lunes}`,
   derivaciones: 'derivaciones',
-  prueba: 'prueba:luciana_2026_08',
+  prueba: (id: string) => `prueba:${id}`,
   indicadores: 'indicadores',
   ajustes: 'ajustes',
   docsIndice: 'docs:indice',
