@@ -105,19 +105,34 @@
 <!-- ── Google Calendar ──────────────────────────────────────────────────── -->
 <h2 class="seccion">Google Calendar</h2>
 <div class="tarjeta">
-  <div class="fila sep">
-    <div class="crece">
-      <span class="fuerte">Google Calendar se trae solo</span>
-      <div class="mini">
-        @if (ultimaSync()) { Última vez: {{ ultimaSync() }}. } @else { Todavía nunca entró. }
-        Se actualiza al abrir esta pantalla y al cambiar de semana; el botón es para forzarlo ya.
+  @if (!googleOk()) {
+    <span class="fuerte">Falta darle permiso a Google</span>
+    <p class="mini" style="margin:4px 0 10px">
+      Entrar con tu cuenta y darle permiso al calendario son dos cosas distintas: lo primero ya
+      está, lo segundo todavía no. Sin ese permiso la app no tiene con qué pedirle los eventos.
+    </p>
+    <a class="btn primario ancho" routerLink="/ajustes">Ir a Ajustes y conectar</a>
+  } @else {
+    @if (!calendarOk()) {
+      <p class="error" style="margin:0 0 10px">
+        Diste permiso a Drive pero no a Calendar: en la pantalla de Google quedó una casilla sin
+        tildar. Andá a Ajustes, tocá Desconectar y volvé a conectar marcando las dos.
+      </p>
+    }
+    <div class="fila sep">
+      <div class="crece">
+        <span class="fuerte">Google Calendar se trae solo</span>
+        <div class="mini">
+          @if (ultimaSync()) { Última vez: {{ ultimaSync() }}. } @else { Todavía nunca entró. }
+          Se actualiza al abrir esta pantalla y al cambiar de semana; el botón es para forzarlo ya.
+        </div>
       </div>
+      <button class="btn chico" type="button" [disabled]="calendario.importando()" (click)="importar()">
+        {{ calendario.importando() ? 'Trayendo…' : 'Importar semana' }}
+      </button>
     </div>
-    <button class="btn chico" type="button" [disabled]="calendario.importando()" (click)="importar()">
-      {{ calendario.importando() ? 'Trayendo…' : 'Importar semana' }}
-    </button>
-  </div>
-  @if (errorImport()) { <p class="error">{{ errorImport() }}</p> }
+  }
+  @if (errorImport() || calendario.error(); as e) { <p class="error">{{ e }}</p> }
 </div>
 
 <!-- ── Alta / edición ───────────────────────────────────────────────────── -->

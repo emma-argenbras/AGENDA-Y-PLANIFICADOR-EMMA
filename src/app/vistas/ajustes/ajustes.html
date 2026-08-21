@@ -148,12 +148,29 @@
           <div class="crece">
             <span class="fuerte">Push con la app cerrada</span>
             <div class="mini">
-              Registra este dispositivo. Los envíos los hace la función programada de Firebase
-              (carpeta functions/); sin desplegarla, esto solo guarda el token.
+              Los avisos de arriba ya funcionan con la app abierta o instalada. Esto es lo otro:
+              que lleguen con la app cerrada. Necesita tres cosas y ninguna es automática.
             </div>
           </div>
-          <button class="btn chico" type="button" (click)="activarPush()">Registrar</button>
         </div>
+
+        <ol class="num mini" style="margin:10px 0 0">
+          <li>La clave VAPID, acá abajo.</li>
+          <li>El proyecto de Firebase en plan Blaze (las funciones programadas no corren en el gratuito).</li>
+          <li>Desplegar la carpeta <code>functions/</code>, que es la que manda los avisos.</li>
+        </ol>
+
+        <label class="campo" style="margin-top:12px">
+          <span>Clave VAPID (Firebase → Configuración del proyecto → Cloud Messaging)</span>
+          <input type="text" placeholder="B..." [value]="vapid()"
+                 (input)="vapid.set($any($event.target).value)">
+        </label>
+
+        <button class="btn chico" type="button" (click)="activarPush()">Registrar este dispositivo</button>
+        @if (errorPush()) { <p class="error">{{ errorPush() }}</p> }
+        @if (push.tokenPush()) {
+          <p class="mini" style="margin:8px 0 0">Dispositivo registrado. Falta que la función esté desplegada.</p>
+        }
       </div>
     }
   </div>

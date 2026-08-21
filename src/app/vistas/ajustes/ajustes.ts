@@ -166,12 +166,22 @@ export class Ajustes {
     }
   }
 
+  /* ── Push con la app cerrada ───────────────────────────────────────────── */
+
+  protected readonly vapid = linkedSignal(() => this.ajustes()?.vapidKey ?? '');
+  protected readonly errorPush = signal('');
+
   protected async activarPush(): Promise<void> {
-    this.error.set('');
+    // El error va al lado del botón, no al pie de la pantalla: puesto lejos,
+    // tocar «Registrar» parecía no hacer nada.
+    this.errorPush.set('');
     try {
+      if (this.vapid().trim() !== (this.ajustes()?.vapidKey ?? '')) {
+        await this.datos.guardarAjustes({ vapidKey: this.vapid().trim() });
+      }
       await this.push.activarPush();
       this.avisos.mostrar('Este dispositivo quedó registrado para push.');
-    } catch (e) { this.error.set(mensaje(e)); }
+    } catch (e) { this.errorPush.set(mensaje(e)); }
   }
 
   /* ── Tema ──────────────────────────────────────────────────────────────── */

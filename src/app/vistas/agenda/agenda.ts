@@ -9,6 +9,7 @@ import { Component, computed, effect, inject, resource, signal, ChangeDetectionS
 import { RouterLink } from '@angular/router';
 import { Datos } from '../../data/datos';
 import { Calendario } from '../../data/calendario';
+import { Drive } from '../../data/drive';
 import { Avisos } from '../../ui/avisos';
 import { Dialogo } from '../../ui/dialogo';
 import { Tema } from '../../ui/tema';
@@ -32,6 +33,7 @@ export class Agenda {
   private readonly datos = inject(Datos);
   private readonly avisos = inject(Avisos);
   protected readonly calendario = inject(Calendario);
+  private readonly drive = inject(Drive);
   private readonly tema = inject(Tema);
   private readonly cfg = inject(Configuracion);
 
@@ -64,8 +66,17 @@ export class Agenda {
       prioridades: await this.datos.prioridades(this.hoy),
       pendientes: (await this.datos.pendientes()).filter(x => x.estado === 'abierto').slice(0, 6),
       cierres: await this.datos.cierresDePruebas(this.cfg.reglas().pruebas.map(p => p.id)),
+      // Entrar con la cuenta (la nube) y dar permiso a Drive/Calendar son dos
+      // cosas distintas, y la pantalla las confundía en una sola: decía
+      // «todavía nunca entró» tanto si faltaba el permiso como si no había
+      // eventos.
+      googleOk: await this.drive.conectado(),
+      calendarOk: await this.drive.tieneCalendario(),
     }),
   });
+
+  protected readonly googleOk = computed(() => this.datosSemana.value()?.googleOk ?? false);
+  protected readonly calendarOk = computed(() => this.datosSemana.value()?.calendarOk ?? true);
 
   protected readonly eventos = computed(() => this.datosSemana.value()?.eventos ?? []);
   protected readonly choques = computed(() => solapados(this.eventos()));

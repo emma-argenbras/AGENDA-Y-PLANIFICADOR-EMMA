@@ -97,7 +97,12 @@ export class AvisosPush {
     const app = this.firebase.app();
     const cfg = this.firebase.config();
     if (!app || !cfg) throw new Error('Primero configurá Firebase en Ajustes.');
-    if (!cfg.vapidKey) throw new Error('Falta la clave VAPID (Firebase → Cloud Messaging → Web Push certificates).');
+    // La pegada a mano gana: así se puede completar desde el teléfono.
+    const vapid = (await this.datos.ajustes()).vapidKey || cfg.vapidKey;
+    if (!vapid) {
+      throw new Error('Falta la clave VAPID. Está en consola de Firebase → Configuración del '
+        + 'proyecto → Cloud Messaging → Certificados push web. Pegala acá abajo.');
+    }
     await this.pedirPermiso();
 
     const { getMessaging, getToken, onMessage, isSupported } = await import('firebase/messaging');
@@ -105,7 +110,7 @@ export class AvisosPush {
 
     const messaging = getMessaging(app);
     const registration = await navigator.serviceWorker.ready;
-    const token = await getToken(messaging, { vapidKey: cfg.vapidKey, serviceWorkerRegistration: registration });
+    const token = await getToken(messaging, { vapidKey: vapid, serviceWorkerRegistration: registration });
     if (!token) throw new Error('Google no devolvió un token de push.');
 
     await this.datos.escribir('fcm:token', { token, dispositivo: navigator.userAgent.slice(0, 120), fecha: Date.now() });

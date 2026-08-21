@@ -36,7 +36,15 @@ interface ArchivoDrive {
   webViewLink?: string; ruta: string;
 }
 
-interface Token { access_token: string; expira: number }
+/**
+ * `alcance` es lo que Google terminó dando, que no es necesariamente lo que se
+ * pidió: en la pantalla de permisos hay una tilde por cada cosa y se puede
+ * dejar una sin marcar. Sin guardarlo, la app no tiene forma de distinguir
+ * «Google dijo que no» de «Google nunca fue consultado».
+ */
+interface Token { access_token: string; expira: number; alcance?: string }
+
+const CALENDARIO = 'https://www.googleapis.com/auth/calendar.readonly';
 
 interface ClienteToken { requestAccessToken(): void }
 interface GoogleGis {
@@ -44,7 +52,7 @@ interface GoogleGis {
     oauth2: {
       initTokenClient(o: {
         client_id: string; scope: string; prompt: string;
-        callback: (r: { access_token?: string; expires_in?: number; error?: string }) => void;
+        callback: (r: { access_token?: string; expires_in?: number; error?: string; scope?: string }) => void;
         error_callback?: (e: { type?: string }) => void;
       }): ClienteToken;
       revoke(token: string): void;
@@ -66,6 +74,27 @@ export class Drive {
   async #token(): Promise<string | null> {
     const t = await this.datos.tokenGoogle<Token>();
     return t && t.expira > Date.now() + 60_000 ? t.access_token : null;
+  }
+
+  /** Los permisos que Google efectivamente dio en la última conexión. */
+  async permisos(): Promise<string[]> {
+    const t = await this.datos.tokenGoogle<Token>();
+    return (t?.alcance ?? '').split(/\s+/).filter(Boolean);
+  }
+
+  /**
+   * Si esto da false con la app conectada, el permiso de Calendar quedó sin
+   * tildar en la pantalla de Google y no hay nada que la app pueda hacer sola:
+   * hay que volver a conectar y marcar las dos casillas.
+   *
+   * Un token viejo, guardado antes de que la app anotara los permisos, no
+   * tiene la lista: en ese caso se asume que sí, y el error real lo va a decir
+   * el propio Calendar cuando se lo consulte.
+   */
+  async tieneCalendario(): Promise<boolean> {
+    const t = await this.datos.tokenGoogle<Token>();
+    if (!t?.alcance) return true;
+    return t.alcance.split(/\s+/).includes(CALENDARIO);
   }
 
   #cargarGis(): Promise<void> {
@@ -131,6 +160,7 @@ export class Drive {
           await this.datos.guardarTokenGoogle<Token>({
             access_token: r.access_token,
             expira: Date.now() + (Number(r.expires_in ?? 3600) - 60) * 1000,
+            alcance: r.scope ?? ALCANCE,
           });
           resolve(r.access_token);
         },
@@ -184,6 +214,7 @@ export class Drive {
       await this.datos.guardarTokenGoogle<Token>({
         access_token: token!,
         expira: Date.now() + (Number(params.get('expires_in') ?? 3600) - 60) * 1000,
+        alcance: params.get('scope') ?? '',
       });
     }
     history.replaceState(null, '', new URL(ruta || '#/ajustes', document.baseURI).href);

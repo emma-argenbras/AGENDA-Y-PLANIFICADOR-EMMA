@@ -150,6 +150,17 @@ await paso('agenda: no deja reservarte un bloque para algo de otro', async () =>
   await sinDialogo();
 });
 
+await paso('agenda: sin permiso de Google lo dice, en vez de decir que nunca entró', async () => {
+  await p.goto(URL + '#/agenda');
+  await p.waitForSelector('h1:has-text("Agenda")');
+  const t = await p.textContent('main');
+  // Entrar con la cuenta y darle permiso al calendario son dos cosas distintas.
+  // Antes las dos daban el mismo cartel y no se sabía cuál faltaba.
+  if (!t.includes('Falta darle permiso a Google')) throw new Error('no distingue permiso de «sin eventos»');
+  if (t.includes('Todavía nunca entró')) throw new Error('sigue diciendo que nunca entró');
+  await p.waitForSelector('a[href="#/ajustes"]:has-text("conectar")');
+});
+
 await paso('agenda: una reunión se puede cerrar con acta', async () => {
   await p.click('.evento:has-text("Directorio semanal") button:has-text("Cerrar con acta")');
   await p.waitForSelector('text=Ya está en Actas');

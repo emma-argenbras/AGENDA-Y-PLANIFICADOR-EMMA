@@ -38,6 +38,16 @@ export class Calendario {
   readonly importando = signal(false);
 
   /**
+   * Lo último que salió mal, aunque haya sido en la importación automática.
+   *
+   * Antes esto se tragaba en silencio: la pantalla decía «todavía nunca entró»
+   * y no había forma de saber si faltaba un permiso, si la API estaba apagada
+   * o si simplemente no había eventos. Un fallo invisible es peor que uno
+   * feo.
+   */
+  readonly error = signal('');
+
+  /**
    * Importación automática: se dispara sola al entrar a la Agenda, al abrir la
    * app y después de conectar Google. Solo actúa si ya hay permiso vigente
    * —nunca abre ventanas de Google por su cuenta— y si lo traído tiene más de
@@ -50,7 +60,11 @@ export class Calendario {
       const { ultimaSyncCalendario } = await this.datos.ajustes();
       if (ultimaSyncCalendario && Date.now() - ultimaSyncCalendario < FRESCURA_MS) return;
       await this.importar(desdeISO, hastaISO);
-    } catch { /* sin red o permiso vencido: el botón manual lo dice mejor */ }
+    } catch (e) {
+      // No se corta nada por esto —la agenda propia sigue andando— pero queda
+      // dicho, que es distinto de quedar escondido.
+      this.error.set(e instanceof Error ? e.message : String(e));
+    }
   }
 
   /**
@@ -59,18 +73,19 @@ export class Calendario {
    */
   async importar(desdeISO: string, hastaISO: string): Promise<number> {
     this.importando.set(true);
+    this.error.set('');
     try {
+      if (!(await this.drive.tieneCalendario())) {
+        throw new Error('El permiso de Calendar quedó sin tildar cuando conectaste con Google. '
+          + 'Andá a Ajustes, tocá Desconectar y volvé a conectar marcando las DOS casillas.');
+      }
       const token = await this.drive.conectar();
       const url = `${API}/calendars/primary/events`
         + `?timeMin=${encodeURIComponent(desdeISO + 'T00:00:00-03:00')}`
         + `&timeMax=${encodeURIComponent(hastaISO + 'T23:59:59-03:00')}`
         + '&singleEvents=true&orderBy=startTime&maxResults=250';
       const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
-      if (r.status === 401 || r.status === 403) {
-        throw new Error('Google rechazó el permiso de Calendar. Revisá que la API esté activada '
-          + 'y volvé a conectar desde Ajustes para que te pida el permiso nuevo.');
-      }
-      if (!r.ok) throw new Error(`Calendar respondió ${r.status}.`);
+      if (!r.ok) throw new Error(explicar(r.status, await r.text().catch(() => '')));
 
       const data = await r.json() as { items?: EventoGoogle[] };
       const porFecha = new Map<string, Evento[]>();
@@ -117,6 +132,41 @@ export class Calendario {
       this.importando.set(false);
     }
   }
+}
+
+/**
+ * Google contesta 403 por dos motivos muy distintos y con el mismo número, y
+ * el paso a seguir no se parece en nada: uno se arregla en la consola de
+ * Google y el otro volviendo a dar el permiso desde el teléfono. Decir
+ * «Calendar respondió 403» deja al usuario adivinando entre las dos.
+ */
+export function explicar(status: number, cuerpo: string): string {
+  const t = cuerpo.toLowerCase();
+
+  if (t.includes('accessnotconfigured') || t.includes('has not been used in project')
+      || t.includes('is disabled')) {
+    return 'La API de Google Calendar está apagada en el proyecto. Entrá a '
+      + 'console.cloud.google.com → APIs y servicios → Biblioteca, buscá «Google Calendar API» '
+      + 'y tocá Habilitar. Después esperá un minuto y volvé a probar.';
+  }
+  if (t.includes('scope') || t.includes('insufficient')) {
+    return 'Al token le falta el permiso de Calendar. Andá a Ajustes, tocá Desconectar y volvé '
+      + 'a conectar marcando las DOS casillas de permiso.';
+  }
+  if (status === 401) {
+    return 'El permiso de Google venció. Volvé a conectar desde Ajustes.';
+  }
+  if (status === 403) {
+    return 'Google rechazó el pedido a Calendar. Suele ser la API apagada en el proyecto o el '
+      + 'permiso sin tildar: probá primero volviendo a conectar desde Ajustes.';
+  }
+  if (status === 404) {
+    return 'Esa cuenta de Google no tiene un calendario principal.';
+  }
+  if (status >= 500) {
+    return `Google está con problemas (${status}). Probá de nuevo en un rato.`;
+  }
+  return `Calendar respondió ${status}.`;
 }
 
 function fechasEntre(desde: string, hasta: string): string[] {

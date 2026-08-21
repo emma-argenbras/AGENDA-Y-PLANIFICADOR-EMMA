@@ -72,6 +72,11 @@ export interface Ajustes {
   ultimaSync: number | null;
   ultimaSyncCalendario: number | null;
   tema: 'auto' | 'claro' | 'oscuro';
+  /**
+   * Clave VAPID para el push con la app cerrada. Va acá y no en el build para
+   * que se pueda pegar desde el teléfono sin esperar una versión nueva.
+   */
+  vapidKey: string;
 }
 
 export const AJUSTES_POR_DEFECTO: Ajustes = {
@@ -88,6 +93,7 @@ export const AJUSTES_POR_DEFECTO: Ajustes = {
   ultimaSync: null,
   ultimaSyncCalendario: null,
   tema: 'auto',
+  vapidKey: '',
 };
 
 export interface DocIndexado {
