@@ -85,6 +85,29 @@ export class Ajustes {
   protected readonly clientId = linkedSignal(() => this.ajustes()?.driveClientId ?? '');
   protected readonly folderId = linkedSignal(() => this.ajustes()?.driveFolderId ?? '');
 
+  /* ── Lo que Google tiene que tener autorizado ──────────────────────────── */
+
+  /**
+   * Las dos direcciones van a listas distintas de la consola y no son
+   * intercambiables; el error más común es pegar una en el lugar de la otra.
+   * Se muestran calculadas, no escritas a mano: son exactamente lo que la app
+   * manda, con la barra final y las mayúsculas que correspondan.
+   */
+  protected readonly uriDeRetorno = this.drive.uriDeRetorno();
+  protected readonly origenAutorizado = this.drive.origenAutorizado();
+  protected readonly verPermisos = signal(false);
+
+  protected async copiar(texto: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(texto);
+      this.avisos.mostrar('Copiado. Pegalo en la consola de Google.');
+    } catch {
+      // Sin portapapeles (pasa en algunos navegadores embebidos): el texto
+      // está en un campo, así que se puede seleccionar y copiar a mano.
+      this.avisos.mostrar('No pude copiarlo solo: mantené apretado el texto y copialo.');
+    }
+  }
+
   protected async guardarDrive(): Promise<void> {
     await this.datos.guardarAjustes({
       driveClientId: this.clientId().trim(),

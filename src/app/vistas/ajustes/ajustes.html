@@ -84,6 +84,42 @@
       }
       <button class="btn chico fantasma" type="button" (click)="ayudaDrive.set(true)">Cómo saco el Client ID</button>
     </div>
+
+    @if (drive.errorDeGoogle(); as e) {
+      <p class="error" style="margin-top:10px">{{ e }}</p>
+    }
+
+    <div class="entre" style="margin-top:14px">
+      <button class="btn chico fantasma ancho" type="button" (click)="verPermisos.set(!verPermisos())">
+        {{ verPermisos() ? 'Ocultar' : 'Google dice «redirect_uri_mismatch»' }}
+      </button>
+
+      @if (verPermisos()) {
+        <p class="mini" style="margin:10px 0">
+          Google compara estas dos direcciones carácter por carácter, con la barra final y las
+          mayúsculas incluidas. Copialas de acá: son exactamente lo que manda esta app, no algo
+          escrito a mano. Van a dos listas distintas y no se pueden intercambiar.
+        </p>
+
+        <label class="campo">
+          <span>1. URIs de redireccionamiento autorizados</span>
+          <input type="text" readonly [value]="uriDeRetorno" (focus)="$any($event.target).select()">
+        </label>
+        <button class="btn chico ancho" type="button" (click)="copiar(uriDeRetorno)">Copiar la dirección de vuelta</button>
+
+        <label class="campo" style="margin-top:14px">
+          <span>2. Orígenes autorizados de JavaScript</span>
+          <input type="text" readonly [value]="origenAutorizado" (focus)="$any($event.target).select()">
+        </label>
+        <button class="btn chico ancho" type="button" (click)="copiar(origenAutorizado)">Copiar el origen</button>
+
+        <p class="mini" style="margin:14px 0 0">
+          Dónde se pegan: console.cloud.google.com → proyecto agenda-y-planificador-emma →
+          Google Auth Platform → Clientes → el cliente web de esta app. Guardá y esperá un minuto:
+          Google tarda un poco en tomarlo.
+        </p>
+      }
+    </div>
   </div>
 
   <!-- ── Avisos ─────────────────────────────────────────────────────────── -->

@@ -594,6 +594,20 @@ await paso('ajustes: hay botón de actualización manual', async () => {
     .first().waitFor({ timeout: 20000 });
 });
 
+await paso('ajustes: muestra la dirección exacta que Google tiene que autorizar', async () => {
+  await p.goto(URL + '#/ajustes');
+  await p.click('button:has-text("redirect_uri_mismatch")');
+  const campos = p.locator('input[readonly]');
+  const uri = await campos.nth(0).inputValue();
+  const origen = await campos.nth(1).inputValue();
+  // Son dos listas distintas de la consola de Google y no son intercambiables:
+  // la de vuelta lleva la carpeta y la barra final, el origen no lleva ninguna.
+  if (!uri.endsWith('/')) throw new Error('la dirección de vuelta tiene que terminar en barra: ' + uri);
+  if (origen.endsWith('/')) throw new Error('el origen no lleva barra final: ' + origen);
+  if (!uri.startsWith(origen + '/')) throw new Error(`no cuelgan del mismo origen: ${uri} / ${origen}`);
+  if (!/^https?:\/\//.test(origen)) throw new Error('el origen no es una dirección: ' + origen);
+});
+
 await paso('ajustes: se puede cambiar el tema', async () => {
   await p.goto(URL + '#/ajustes');
   await p.click('.chip:has-text("Oscuro")');

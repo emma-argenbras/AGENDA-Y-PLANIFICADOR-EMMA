@@ -86,6 +86,20 @@ export class Drive {
    * funcionar ahí. En ese caso se sale a Google por redirección de página
    * completa y se vuelve con el permiso puesto.
    */
+  /**
+   * La dirección exacta que la app le pasa a Google como `redirect_uri`, y que
+   * tiene que estar autorizada en la consola. Google la compara carácter por
+   * carácter —barra final incluida—, así que conviene copiarla de acá y no
+   * escribirla: si no coincide, la respuesta es «Error 400: redirect_uri_mismatch».
+   */
+  uriDeRetorno(): string { return new URL(document.baseURI).href; }
+
+  /** El origen, que va en la OTRA lista de la consola (sin la carpeta ni la barra). */
+  origenAutorizado(): string { return new URL(document.baseURI).origin; }
+
+  /** Lo último que dijo Google al volver, si volvió con una queja. */
+  readonly errorDeGoogle = signal('');
+
   #esAppInstalada(): boolean {
     return matchMedia('(display-mode: standalone)').matches
       || (navigator as { standalone?: boolean }).standalone === true;
@@ -157,9 +171,16 @@ export class Drive {
       ? JSON.parse(pendiente) as { estado: string; ruta: string }
       : { estado: '', ruta: '#/ajustes' };
 
+    const queja = params.get('error');
+    if (queja) this.errorDeGoogle.set(traducir(queja));
+
     const token = params.get('access_token');
     const ok = Boolean(token) && params.get('state') === estado;
+    if (token && !ok) {
+      this.errorDeGoogle.set('La vuelta de Google no coincide con el pedido que hizo la app. Probá de nuevo.');
+    }
     if (ok) {
+      this.errorDeGoogle.set('');
       await this.datos.guardarTokenGoogle<Token>({
         access_token: token!,
         expira: Date.now() + (Number(params.get('expires_in') ?? 3600) - 60) * 1000,
@@ -338,6 +359,9 @@ const termos = (q: string) => normalizar(q).split(/[^a-z0-9]+/).filter(t => t.le
 function traducir(tipo: string | undefined): string {
   const t = String(tipo ?? '');
   if (t.includes('popup')) return 'El navegador bloqueó la ventana de Google. Permití las ventanas emergentes.';
+  if (t.includes('redirect_uri_mismatch')) {
+    return 'Google no tiene autorizada la dirección de vuelta de esta app. Copiala de acá abajo y pegala en la consola.';
+  }
   if (t.includes('access_denied')) return 'Google rechazó el permiso. Revisá que la cuenta sea la dueña de la carpeta.';
   return 'No se pudo conectar con Google' + (t ? `: ${t}` : '.');
 }
