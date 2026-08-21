@@ -9,6 +9,31 @@
 import type { Firestore } from 'firebase/firestore';
 import type { Entrada, Repositorio } from './repositorio';
 
+/**
+ * Firestore rechaza `undefined` y corta la escritura entera: un solo campo
+ * opcional sin valor —una reunión sin invitados, un pendiente sin fecha de
+ * cierre— tira abajo el día completo con «Unsupported field value: undefined».
+ *
+ * En JavaScript un campo ausente y un campo en `undefined` son lo mismo, así
+ * que se limpia acá, en la única puerta a la nube, en vez de pedirle a cada
+ * pantalla que se acuerde. Un campo que no está vuelve a leerse como `undefined`
+ * igual, así que nada cambia del lado de la app.
+ */
+function sinIndefinidos<T>(valor: T): T {
+  if (Array.isArray(valor)) {
+    // En un arreglo no se puede borrar el elemento sin correr a los que siguen.
+    return valor.map(v => (v === undefined ? null : sinIndefinidos(v))) as T;
+  }
+  if (valor && typeof valor === 'object' && Object.getPrototypeOf(valor) === Object.prototype) {
+    const limpio: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(valor)) {
+      if (v !== undefined) limpio[k] = sinIndefinidos(v);
+    }
+    return limpio as T;
+  }
+  return valor;
+}
+
 type FirestoreApi = typeof import('firebase/firestore');
 
 export class RepoFirestore implements Repositorio {
@@ -34,7 +59,7 @@ export class RepoFirestore implements Repositorio {
   }
 
   async escribir<T>(clave: string, valor: T): Promise<void> {
-    await this.api.setDoc(this.#ref(clave), { v: valor, actualizado: Date.now() });
+    await this.api.setDoc(this.#ref(clave), { v: sinIndefinidos(valor), actualizado: Date.now() });
   }
 
   async borrar(clave: string): Promise<void> {

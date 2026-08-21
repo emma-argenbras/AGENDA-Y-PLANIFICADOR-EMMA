@@ -99,7 +99,7 @@
     </div>
   }
 
-  <button class="btn primario ancho" type="button" (click)="nuevo(d.fecha)">+ Agregar al {{ diaCorto(d.fecha) }}</button>
+  <button class="btn primario ancho" type="button" (click)="nuevo(d.fecha)">+ Agregar al {{ diaLargo(d.fecha) }}</button>
 }
 
 <!-- ── Google Calendar ──────────────────────────────────────────────────── -->
@@ -175,7 +175,9 @@
       <p class="error">{{ bloqueoTexto() }}</p>
     }
   }
-  <button pie class="btn primario" type="button" (click)="guardar()">Guardar</button>
+  <button pie class="btn primario" type="button" [disabled]="guardando()" (click)="guardar()">
+    {{ guardando() ? 'Guardando…' : 'Guardar' }}
+  </button>
   @if (!esNuevo()) {
     <button pie class="btn peligro" type="button" (click)="borrar()">Borrar</button>
   }

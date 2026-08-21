@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  aHora, aMinutos, avisoReuniones, horasDe, horasPorTipo, ordenarDia,
-  primerHueco, solapados, type Evento,
+  aHora, aMinutos, avisoReuniones, bloqueDe, horasDe, horasPorTipo, ordenarDia,
+  primerHueco, sinRepetidos, solapados, type Evento,
 } from './agenda';
 
 const e = (hora: string, minutos: number, over: Partial<Evento> = {}): Evento => ({
@@ -63,5 +63,43 @@ describe('primer hueco libre', () => {
   it('devuelve null si no entra', () => {
     const lleno = Array.from({ length: 11 }, (_, i) => e(aHora(8 * 60 + i * 60), 60, { id: 'x' + i }));
     expect(primerHueco(lleno, 60)).toBeNull();
+  });
+});
+
+describe('escrituras que se cruzan', () => {
+  // Pasó de verdad: dos toques en «Guardar» dejaron el mismo bloque dos veces
+  // en la agenda del día, con el mismo título y la misma hora.
+  it('un id repetido queda una sola vez', () => {
+    const uno = e('08:35', 30, { id: 'a', titulo: 'Video ecofiber' });
+    expect(sinRepetidos([uno, uno]).length).toBe(1);
+  });
+
+  it('se queda la última versión, sin cambiar de lugar', () => {
+    const viejo = e('08:35', 30, { id: 'a', titulo: 'antes' });
+    const nuevo = e('08:35', 30, { id: 'a', titulo: 'después' });
+    const otro = e('10:00', 60, { id: 'b' });
+    const r = sinRepetidos([viejo, otro, nuevo]);
+    expect(r.map(x => x.id)).toEqual(['a', 'b']);
+    expect(r[0]!.titulo).toBe('después');
+  });
+
+  it('dos eventos distintos a la misma hora sí conviven: eso es un choque, no un duplicado', () => {
+    const r = sinRepetidos([e('09:00', 60, { id: 'a' }), e('09:00', 60, { id: 'b' })]);
+    expect(r.length).toBe(2);
+    expect(solapados(r).size).toBe(2);
+  });
+});
+
+describe('un bloque reservado no fabrica campos vacíos', () => {
+  // Firestore rechaza `undefined` y corta la escritura del día entero.
+  it('sin pendiente ni prioridad, esas claves no existen', () => {
+    const b = bloqueDe('Llamar a Ruiz', '2026-08-20', '09:00');
+    expect('pendienteId' in b).toBe(false);
+    expect('prioridadId' in b).toBe(false);
+    expect(Object.values(b).every(v => v !== undefined)).toBe(true);
+  });
+
+  it('con pendiente, la clave está y apunta bien', () => {
+    expect(bloqueDe('x', '2026-08-20', '09:00', 'p1').pendienteId).toBe('p1');
   });
 });

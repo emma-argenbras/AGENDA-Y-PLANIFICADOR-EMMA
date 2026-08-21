@@ -18,7 +18,7 @@ import {
 } from '../../core/agenda';
 import { Configuracion } from '../../data/configuracion';
 import { evaluarPrioridad } from '../../core/clasificador';
-import { diaCorto, diasSemana, fechaCorta, fechaLarga, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
+import { diaCorto, diaLargo, diasSemana, fechaCorta, fechaLarga, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
 import { pruebasConRevision } from '../../core/pruebas';
 
 @Component({
@@ -41,6 +41,7 @@ export class Agenda {
   protected readonly fechaCorta = fechaCorta;
   protected readonly fechaLarga = fechaLarga;
   protected readonly diaCorto = diaCorto;
+  protected readonly diaLargo = diaLargo;
 
   protected readonly lunes = signal(inicioSemana(this.hoy));
   protected readonly diaAbierto = signal<string>(this.hoy);
@@ -149,9 +150,12 @@ export class Agenda {
     if (e) this.editando.set({ ...e, [clave]: valor });
   }
 
+  /** Guardar tarda lo que tarda la nube: sin esto, dos toques crean dos eventos. */
+  protected readonly guardando = signal(false);
+
   protected async guardar(): Promise<void> {
     const e = this.editando();
-    if (!e || !e.titulo.trim()) return;
+    if (!e || !e.titulo.trim() || this.guardando()) return;
 
     // Un bloque de trabajo que es de otro no entra, igual que una prioridad.
     // En una reunión no se bloquea: podés estar invitado a algo que no es tuyo.
@@ -166,9 +170,16 @@ export class Agenda {
     }
 
     const limpio = { ...e, titulo: e.titulo.trim() };
-    if (this.esNuevo()) await this.datos.agregarEvento(limpio);
-    else await this.datos.actualizarEvento(limpio.fecha, limpio.id, limpio);
-    this.editando.set(null);
+    this.guardando.set(true);
+    try {
+      if (this.esNuevo()) await this.datos.agregarEvento(limpio);
+      else await this.datos.actualizarEvento(limpio.fecha, limpio.id, limpio);
+      this.editando.set(null);
+    } catch (err) {
+      this.bloqueoTexto.set(err instanceof Error ? err.message : String(err));
+    } finally {
+      this.guardando.set(false);
+    }
   }
 
   protected async borrar(): Promise<void> {

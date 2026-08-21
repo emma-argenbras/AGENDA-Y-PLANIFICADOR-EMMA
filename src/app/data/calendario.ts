@@ -81,19 +81,35 @@ export class Calendario {
       }
 
       let total = 0;
+      // Un día que falla no puede llevarse puesta la semana entera: se anota
+      // y se sigue. Antes, un solo evento con un campo raro dejaba la agenda
+      // completa sin importar y sin explicación.
+      const fallados: string[] = [];
+      let primerError: unknown = null;
       const fechas = new Set([...porFecha.keys(), ...fechasEntre(desdeISO, hastaISO)]);
       for (const fecha of fechas) {
-        const previos = await this.datos.eventos(fecha);
-        const mios = previos.filter(e => e.origen !== 'google');
-        const deGoogle = porFecha.get(fecha) ?? [];
-        // Si ya lo habías cerrado con acta, se respeta ese vínculo.
-        const conVinculos = deGoogle.map(e => {
-          const antes = previos.find(p => p.googleId === e.googleId);
-          return antes?.reunionId ? { ...e, reunionId: antes.reunionId } : e;
-        });
-        if (!mios.length && !conVinculos.length && !previos.length) continue;
-        await this.datos.guardarEventos(fecha, [...mios, ...conVinculos]);
-        total += conVinculos.length;
+        try {
+          const previos = await this.datos.eventos(fecha);
+          const mios = previos.filter(e => e.origen !== 'google');
+          const deGoogle = porFecha.get(fecha) ?? [];
+          // Si ya lo habías cerrado con acta, se respeta ese vínculo.
+          const conVinculos = deGoogle.map(e => {
+            const antes = previos.find(p => p.googleId === e.googleId);
+            return antes?.reunionId ? { ...e, reunionId: antes.reunionId } : e;
+          });
+          if (!mios.length && !conVinculos.length && !previos.length) continue;
+          await this.datos.guardarEventos(fecha, [...mios, ...conVinculos]);
+          total += conVinculos.length;
+        } catch (err) {
+          fallados.push(fecha);
+          primerError ??= err;
+        }
+      }
+
+      if (fallados.length) {
+        // No se marca como al día: la próxima vez tiene que volver a intentar.
+        const detalle = primerError instanceof Error ? primerError.message : String(primerError);
+        throw new Error(`${fallados.length} día(s) no se pudieron guardar (${fallados.join(', ')}): ${detalle}`);
       }
       await this.datos.guardarAjustes({ ultimaSyncCalendario: Date.now() });
       return total;
@@ -122,6 +138,8 @@ function convertir(g: EventoGoogle): Evento | null {
   const local = new Date(inicio.getTime() - inicio.getTimezoneOffset() * 60000);
   const minutos = Math.max(15, Math.round((fin.getTime() - inicio.getTime()) / 60000));
   const invitados = (g.attendees ?? []).filter(a => !a.self);
+  const con = invitados.map(a => a.displayName || a.email).filter(Boolean).slice(0, 3).join(', ');
+  const nota = g.location?.trim() ?? '';
 
   return {
     id: 'g:' + g.id,
@@ -131,9 +149,11 @@ function convertir(g: EventoGoogle): Evento | null {
     minutos,
     titulo: g.summary?.trim() || '(sin título)',
     tipo: adivinarTipo(g),
-    con: invitados.map(a => a.displayName || a.email).filter(Boolean).slice(0, 3).join(', ') || undefined,
-    nota: g.location?.trim() || undefined,
     origen: 'google',
+    // Campos opcionales: se ponen solo si tienen algo. Un campo en `undefined`
+    // no es lo mismo que un campo ausente para todos los que lo reciben.
+    ...(con ? { con } : {}),
+    ...(nota ? { nota } : {}),
   };
 }
 

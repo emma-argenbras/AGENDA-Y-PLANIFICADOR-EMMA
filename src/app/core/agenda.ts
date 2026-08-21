@@ -65,8 +65,22 @@ export function bloqueDe(
 ): Evento {
   return {
     id: crypto.randomUUID(), fecha, hora, minutos: 60,
-    titulo: texto, tipo: 'bloque', origen: 'app', pendienteId, prioridadId,
+    titulo: texto, tipo: 'bloque', origen: 'app',
+    ...(pendienteId ? { pendienteId } : {}),
+    ...(prioridadId ? { prioridadId } : {}),
   };
+}
+
+/**
+ * Un id repetido en un mismo día nunca son dos cosas distintas: es una
+ * escritura que se cruzó con otra (dos toques en «Guardar», la importación de
+ * Google corriendo mientras creás algo). Se queda la última versión, en el
+ * lugar que ya ocupaba.
+ */
+export function sinRepetidos(es: readonly Evento[]): Evento[] {
+  const porId = new Map<string, Evento>();
+  for (const e of es) porId.set(e.id, e);
+  return [...porId.values()];
 }
 
 export const aMinutos = (hora: string): number => {

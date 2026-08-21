@@ -35,6 +35,11 @@ export function fechaCorta(iso: string): string {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+/** El día en palabras: «viernes». Para botones donde «vie» parece un error. */
+export function diaLargo(iso: string): string {
+  return DIAS[new Date(iso + 'T12:00:00').getDay()] ?? '';
+}
+
 export function diaCorto(iso: string): string {
   return (DIAS[new Date(iso + 'T12:00:00').getDay()] ?? '').slice(0, 3);
 }

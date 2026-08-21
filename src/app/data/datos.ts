@@ -20,7 +20,7 @@ import {
 } from '../core/modelo';
 import type { RegistrosPrueba } from '../core/prueba-luciana';
 import type { Pendiente, PlanSemana } from '../core/pendientes';
-import { bloqueDe, primerHueco, type Evento } from '../core/agenda';
+import { bloqueDe, primerHueco, sinRepetidos, type Evento } from '../core/agenda';
 
 @Injectable({ providedIn: 'root' })
 export class Datos {
@@ -61,16 +61,33 @@ export class Datos {
 
   /* ── Agenda ────────────────────────────────────────────────────────────── */
 
+  /**
+   * Al leer también se filtran los repetidos, no solo al guardar: lo que quedó
+   * duplicado antes de que existiera esa defensa se ve una sola vez, sin tener
+   * que ir a borrarlo a mano.
+   */
   async eventos(fecha: string): Promise<Evento[]> {
-    return (await this.repo.leer<Evento[]>(K.agenda(fecha))) ?? [];
+    return sinRepetidos((await this.repo.leer<Evento[]>(K.agenda(fecha))) ?? []);
   }
 
-  guardarEventos(fecha: string, es: Evento[]) { return this.escribir(K.agenda(fecha), es); }
+  /**
+   * Todos los eventos de un día pasan por acá.
+   *
+   * Guardar es leer-modificar-escribir, así que dos escrituras que se cruzan
+   * —tocar «Guardar» dos veces, o la importación de Google corriendo mientras
+   * creás algo— pueden dejar el mismo evento dos veces en la lista. Un id
+   * repetido nunca son dos cosas distintas: se queda la última versión, en el
+   * lugar donde ya estaba.
+   */
+  guardarEventos(fecha: string, es: Evento[]) {
+    return this.escribir(K.agenda(fecha), sinRepetidos(es));
+  }
 
   /** Eventos de un rango, con la fecha ya puesta en cada uno. */
   async eventosEntre(desde: string, hasta: string): Promise<Evento[]> {
     const filas = await this.repo.rango<Evento[]>(K.agenda(desde), K.agenda(hasta));
-    return filas.flatMap(f => (f.valor ?? []).map(e => ({ ...e, fecha: f.clave.slice('agenda:'.length) })));
+    return filas.flatMap(f =>
+      sinRepetidos(f.valor ?? []).map(e => ({ ...e, fecha: f.clave.slice('agenda:'.length) })));
   }
 
   async agregarEvento(e: Evento): Promise<void> {
