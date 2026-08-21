@@ -7,7 +7,7 @@ import { RouterLink } from '@angular/router';
 import { Component, computed, inject, linkedSignal, resource, signal, ChangeDetectionStrategy } from '@angular/core';
 import { Datos } from '../../data/datos';
 import { Drive } from '../../data/drive';
-import { Calendario } from '../../data/calendario';
+import { Calendario, type Diagnostico } from '../../data/calendario';
 import { Firebase } from '../../data/firebase';
 import { AvisosPush } from '../../data/avisos-push';
 import { Actualizador } from '../../data/actualizador';
@@ -27,7 +27,7 @@ export class Ajustes {
   protected readonly datos = inject(Datos);
   protected readonly firebase = inject(Firebase);
   protected readonly drive = inject(Drive);
-  private readonly calendario = inject(Calendario);
+  protected readonly calendario = inject(Calendario);
   protected readonly push = inject(AvisosPush);
   protected readonly tema = inject(Tema);
   protected readonly actualizador = inject(Actualizador);
@@ -84,6 +84,23 @@ export class Ajustes {
   // Arrancan con lo guardado y siguen siendo editables: eso es linkedSignal.
   protected readonly clientId = linkedSignal(() => this.ajustes()?.driveClientId ?? '');
   protected readonly folderId = linkedSignal(() => this.ajustes()?.driveFolderId ?? '');
+
+  /* ── Probar la conexión con Google ─────────────────────────────────────── */
+
+  protected readonly diagnostico = signal<Diagnostico | null>(null);
+  protected readonly probando = signal(false);
+
+  /** Una consulta real a Google, para dejar de adivinar de a un paso por vez. */
+  protected async probarGoogle(): Promise<void> {
+    this.probando.set(true);
+    this.diagnostico.set(null);
+    try {
+      const lunes = inicioSemana(hoyISO());
+      this.diagnostico.set(await this.calendario.probar(lunes, sumarDias(lunes, 6)));
+    } finally {
+      this.probando.set(false);
+    }
+  }
 
   /* ── Lo que Google tiene que tener autorizado ──────────────────────────── */
 

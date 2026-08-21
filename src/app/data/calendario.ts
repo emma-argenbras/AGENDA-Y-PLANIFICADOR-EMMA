@@ -30,6 +30,8 @@ interface EventoGoogle {
 
 const FRESCURA_MS = 30 * 60 * 1000;
 
+export interface Diagnostico { ok: boolean; titulo: string; detalle: string }
+
 @Injectable({ providedIn: 'root' })
 export class Calendario {
   private readonly datos = inject(Datos);
@@ -68,6 +70,68 @@ export class Calendario {
   }
 
   /**
+   * Una sola consulta de verdad a Google, para dejar de adivinar.
+   *
+   * Recorre exactamente el mismo camino que la importación —mismo permiso,
+   * misma dirección, misma cuenta— y cuenta qué volvió. Cada paso que puede
+   * fallar tiene su propia respuesta, así el siguiente movimiento nunca queda
+   * a criterio de quien lo lee.
+   */
+  async probar(desdeISO: string, hastaISO: string): Promise<Diagnostico> {
+    if (!(await this.drive.conectado())) {
+      return {
+        ok: false,
+        titulo: 'Este dispositivo todavía no tiene permiso',
+        detalle: 'Entrar con la cuenta y darle permiso al calendario son dos cosas distintas, y el '
+          + 'permiso vale por aparato. Tocá «Conectar con Google» acá arriba.',
+      };
+    }
+    if (!(await this.drive.tieneCalendario())) {
+      return {
+        ok: false,
+        titulo: 'Falta el permiso de Calendar',
+        detalle: 'Diste el de Drive pero no el de Calendar: en la pantalla de Google quedó una '
+          + 'casilla sin tildar. Tocá Desconectar y volvé a conectar marcando las dos.',
+      };
+    }
+    try {
+      const token = await this.drive.conectar();
+      const r = await fetch(this.#url(desdeISO, hastaISO), { headers: { Authorization: 'Bearer ' + token } });
+      if (!r.ok) {
+        return { ok: false, titulo: 'Google rechazó el pedido', detalle: explicar(r.status, await r.text().catch(() => '')) };
+      }
+      const data = await r.json() as { items?: EventoGoogle[] };
+      const utiles = (data.items ?? []).filter(g => convertir(g));
+      if (!utiles.length) {
+        return {
+          ok: true,
+          titulo: 'Google contesta bien, pero esa semana está vacía',
+          detalle: 'La conexión funciona. Los eventos de todo el día no se traen: la app solo '
+            + 'muestra lo que ocupa una hora concreta.',
+        };
+      }
+      return {
+        ok: true,
+        titulo: `Todo bien: ${utiles.length} evento(s) esta semana`,
+        detalle: 'Ya deberías verlos en la Agenda.',
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        titulo: 'No se pudo llegar a Google',
+        detalle: e instanceof Error ? e.message : String(e),
+      };
+    }
+  }
+
+  #url(desdeISO: string, hastaISO: string): string {
+    return `${API}/calendars/primary/events`
+      + `?timeMin=${encodeURIComponent(desdeISO + 'T00:00:00-03:00')}`
+      + `&timeMax=${encodeURIComponent(hastaISO + 'T23:59:59-03:00')}`
+      + '&singleEvents=true&orderBy=startTime&maxResults=250';
+  }
+
+  /**
    * Trae los eventos de un rango y los mezcla con lo que ya está guardado.
    * Lo tuyo nunca se pisa: solo se reemplaza lo que vino de Google antes.
    */
@@ -80,11 +144,7 @@ export class Calendario {
           + 'Andá a Ajustes, tocá Desconectar y volvé a conectar marcando las DOS casillas.');
       }
       const token = await this.drive.conectar();
-      const url = `${API}/calendars/primary/events`
-        + `?timeMin=${encodeURIComponent(desdeISO + 'T00:00:00-03:00')}`
-        + `&timeMax=${encodeURIComponent(hastaISO + 'T23:59:59-03:00')}`
-        + '&singleEvents=true&orderBy=startTime&maxResults=250';
-      const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+      const r = await fetch(this.#url(desdeISO, hastaISO), { headers: { Authorization: 'Bearer ' + token } });
       if (!r.ok) throw new Error(explicar(r.status, await r.text().catch(() => '')));
 
       const data = await r.json() as { items?: EventoGoogle[] };

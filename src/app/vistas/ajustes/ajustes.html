@@ -85,6 +85,25 @@
       <button class="btn chico fantasma" type="button" (click)="ayudaDrive.set(true)">Cómo saco el Client ID</button>
     </div>
 
+    <p class="mini" style="margin:10px 0 0">
+      Ojo con esto: el permiso de Google vale <b>por aparato</b>. Todo lo demás —cierres,
+      agenda, reglas— se sincroniza, pero este permiso no viaja, así que en la compu vas a ver
+      otra cosa hasta que conectes también ahí. Con conectar <b>uno solo</b> alcanza para que los
+      eventos aparezcan en todos: lo que se sincroniza es el calendario ya traído.
+    </p>
+
+    <button class="btn ancho" type="button" style="margin-top:12px"
+            [disabled]="probando()" (click)="probarGoogle()">
+      {{ probando() ? 'Preguntándole a Google…' : 'Probar la conexión con Google' }}
+    </button>
+
+    @if (diagnostico(); as d) {
+      <div class="tarjeta" [class.alerta]="!d.ok" style="margin-top:10px">
+        <span class="fuerte">{{ d.ok ? '✓ ' : '⚠ ' }}{{ d.titulo }}</span>
+        <p class="mini" style="margin:4px 0 0">{{ d.detalle }}</p>
+      </div>
+    }
+
     @if (drive.errorDeGoogle(); as e) {
       <p class="error" style="margin-top:10px">{{ e }}</p>
     }

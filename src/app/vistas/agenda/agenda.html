@@ -106,11 +106,19 @@
 <h2 class="seccion">Google Calendar</h2>
 <div class="tarjeta">
   @if (!googleOk()) {
-    <span class="fuerte">Falta darle permiso a Google</span>
-    <p class="mini" style="margin:4px 0 10px">
-      Entrar con tu cuenta y darle permiso al calendario son dos cosas distintas: lo primero ya
-      está, lo segundo todavía no. Sin ese permiso la app no tiene con qué pedirle los eventos.
-    </p>
+    @if (ultimaSync()) {
+      <span class="fuerte">El calendario se trae desde otro aparato</span>
+      <p class="mini" style="margin:4px 0 10px">
+        Última vez: {{ ultimaSync() }}. Los eventos llegan igual, porque lo traído se sincroniza.
+        Conectá acá también solo si querés que este aparato pueda actualizarlo por su cuenta.
+      </p>
+    } @else {
+      <span class="fuerte">Falta darle permiso a Google</span>
+      <p class="mini" style="margin:4px 0 10px">
+        Entrar con tu cuenta y darle permiso al calendario son dos cosas distintas: lo primero ya
+        está, lo segundo todavía no. El permiso vale por aparato y no viaja con la cuenta.
+      </p>
+    }
     <a class="btn primario ancho" routerLink="/ajustes">Ir a Ajustes y conectar</a>
   } @else {
     @if (!calendarOk()) {

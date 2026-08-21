@@ -619,6 +619,15 @@ await paso('ajustes: muestra la dirección exacta que Google tiene que autorizar
   if (!/^https?:\/\//.test(origen)) throw new Error('el origen no es una dirección: ' + origen);
 });
 
+await paso('ajustes: probar la conexión dice qué falta, en un toque', async () => {
+  await p.goto(URL + '#/ajustes');
+  await p.click('button:has-text("Probar la conexión con Google")');
+  // Sin permiso en este aparato, la respuesta tiene que ser esa y no un error genérico.
+  await p.waitForSelector('.tarjeta.alerta:has-text("no tiene permiso")', { timeout: 20000 });
+  const t = await p.textContent('.tarjeta.alerta:has-text("no tiene permiso")');
+  if (!t.includes('por aparato')) throw new Error('no explica que el permiso no viaja entre aparatos');
+});
+
 await paso('ajustes: se puede cambiar el tema', async () => {
   await p.goto(URL + '#/ajustes');
   await p.click('.chip:has-text("Oscuro")');
