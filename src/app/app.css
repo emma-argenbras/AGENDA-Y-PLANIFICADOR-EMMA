@@ -126,3 +126,18 @@ main { padding: 0 16px 28px; max-width: 720px; margin: 0 auto; }
   margin-left: 6px;
   vertical-align: middle;
 }
+
+/* Trabajando contra el aparato habiendo nube: no es una novedad, es una falta. */
+.barra-version.aviso-local {
+  background: var(--critico);
+  color: #fff;
+  text-decoration: none;
+}
+.barra-version.aviso-local .btn-falso {
+  flex: none;
+  background: #fff;
+  color: var(--critico);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 600;
+}

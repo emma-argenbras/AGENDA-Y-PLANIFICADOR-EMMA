@@ -33,29 +33,98 @@ export class Datos {
 
   #nube = signal<RepoFirestore | null>(null);
 
+  /**
+   * Si ya se sabe dónde vive esta sesión: en la nube o en el aparato.
+   *
+   * Restaurar la sesión de Google tarda: hay que cargar la SDK y revalidar el
+   * token contra la red. Hasta que eso termina, la app no sabe cuál de los dos
+   * repositorios es el bueno —y antes contestaba «el del aparato», que a los
+   * dos segundos dejaba de ser cierto—.
+   *
+   * El costo de esa mentira no era estético. Una prioridad cargada en esos
+   * segundos se escribía en el teléfono y no subía nunca: quedaba invisible
+   * desde cualquier otro aparato, sin ningún aviso. Ahora toda lectura y toda
+   * escritura esperan a que esto se decida.
+   */
+  readonly decidido = signal(false);
+
+  #resolverListo!: () => void;
+  readonly #listo = new Promise<void>(r => { this.#resolverListo = r; });
+
+  /** Lo escrito en el aparato mientras se esperaba a la nube, para subirlo después. */
+  #huerfanas = new Set<string>();
+
   constructor() {
+    // Sin proyecto configurado no hay nada que esperar: es local y punto.
+    if (!this.firebase.hayConfig()) this.#decidir();
+
+    // Y si la sesión no resuelve —sin señal, Google caído—, la app abre igual
+    // contra el aparato. Esperar para siempre sería peor que trabajar local.
+    setTimeout(() => this.#decidir(), 8000);
+
     effect(() => {
+      const estado = this.firebase.estado();
       const uid = this.firebase.uid();
       const db = this.firebase.db();
-      if (!uid || !db) { this.#nube.set(null); return; }
-      void import('firebase/firestore').then(api => {
-        this.#nube.set(new RepoFirestore(db, uid, api));
-        this.cambios.update(v => v + 1);
+      if (!uid || !db) {
+        this.#nube.set(null);
+        // 'conectando' todavía no dice nada: recién ahí se sabe que no hay sesión.
+        if (estado === 'sin-config' || estado === 'desconectado' || estado === 'error') this.#decidir();
+        return;
+      }
+      void import('firebase/firestore').then(async api => {
+        const nube = new RepoFirestore(db, uid, api);
+        await this.#rescatar(nube);
+        this.#nube.set(nube);
+        this.#decidir();
+        this.#tocar();
       });
     });
   }
 
-  get repo(): Repositorio { return this.#nube() ?? this.local; }
+  #decidir(): void {
+    if (this.decidido()) return;
+    this.decidido.set(true);
+    this.#resolverListo();
+  }
+
+  /**
+   * Sube lo que quedó escrito en el aparato mientras la nube no estaba lista.
+   * Con la espera de arriba esto casi nunca tiene trabajo; existe para el caso
+   * en que la sesión llegó tarde, después de que la app se cansó de esperar.
+   */
+  async #rescatar(nube: RepoFirestore): Promise<void> {
+    if (!this.#huerfanas.size) return;
+    const claves = [...this.#huerfanas];
+    this.#huerfanas.clear();
+    for (const clave of claves) {
+      const valor = await this.local.leer(clave);
+      if (valor !== null) await nube.escribir(clave, valor).catch(() => { /* se reintenta al próximo cambio */ });
+    }
+  }
+
+  /**
+   * La única puerta a los datos. Espera a que se sepa cuál es el repositorio
+   * bueno: leer del aparato mientras la nube carga muestra una app vacía, y
+   * escribir ahí pierde el dato.
+   */
+  async #puerta(): Promise<Repositorio> {
+    await this.#listo;
+    return this.#nube() ?? this.local;
+  }
 
   #tocar(): void { this.cambios.update(v => v + 1); }
 
   async escribir<T>(clave: string, valor: T): Promise<void> {
-    await this.repo.escribir(clave, valor);
+    const repo = await this.#puerta();
+    await repo.escribir(clave, valor);
+    // Escrito en el aparato habiendo proyecto configurado: todavía puede subir.
+    if (repo === this.local && this.firebase.hayConfig()) this.#huerfanas.add(clave);
     this.#tocar();
   }
 
   async borrar(clave: string): Promise<void> {
-    await this.repo.borrar(clave);
+    await (await this.#puerta()).borrar(clave);
     this.#tocar();
   }
 
@@ -67,7 +136,7 @@ export class Datos {
    * que ir a borrarlo a mano.
    */
   async eventos(fecha: string): Promise<Evento[]> {
-    return sinRepetidos((await this.repo.leer<Evento[]>(K.agenda(fecha))) ?? []);
+    return sinRepetidos((await (await this.#puerta()).leer<Evento[]>(K.agenda(fecha))) ?? []);
   }
 
   /**
@@ -85,7 +154,7 @@ export class Datos {
 
   /** Eventos de un rango, con la fecha ya puesta en cada uno. */
   async eventosEntre(desde: string, hasta: string): Promise<Evento[]> {
-    const filas = await this.repo.rango<Evento[]>(K.agenda(desde), K.agenda(hasta));
+    const filas = await (await this.#puerta()).rango<Evento[]>(K.agenda(desde), K.agenda(hasta));
     return filas.flatMap(f =>
       sinRepetidos(f.valor ?? []).map(e => ({ ...e, fecha: f.clave.slice('agenda:'.length) })));
   }
@@ -120,13 +189,13 @@ export class Datos {
 
   /* ── Cierre de jornada ─────────────────────────────────────────────────── */
 
-  checkin(fecha: string) { return this.repo.leer<Checkin>(K.checkin(fecha)); }
+  async checkin(fecha: string) { return (await this.#puerta()).leer<Checkin>(K.checkin(fecha)); }
   guardarCheckin(fecha: string, ck: Checkin) { return this.escribir(K.checkin(fecha), ck); }
   borrarCheckin(fecha: string) { return this.borrar(K.checkin(fecha)); }
 
   /** Check-ins entre dos fechas, sin huecos que rompan los cálculos. */
   async checkinsEntre(desde: string, hasta: string): Promise<Checkin[]> {
-    const filas: Entrada<Checkin>[] = await this.repo.rango<Checkin>(K.checkin(desde), K.checkin(hasta));
+    const filas: Entrada<Checkin>[] = await (await this.#puerta()).rango<Checkin>(K.checkin(desde), K.checkin(hasta));
     return filas
       .map(f => ({ ...f.valor, fecha: f.clave.slice('checkin:'.length) }))
       .filter(c => Array.isArray(c.segmentos))
@@ -136,18 +205,18 @@ export class Datos {
   /* ── Prioridades ───────────────────────────────────────────────────────── */
 
   async prioridades(fecha: string): Promise<Prioridad[]> {
-    return (await this.repo.leer<Prioridad[]>(K.prioridades(fecha))) ?? [];
+    return (await (await this.#puerta()).leer<Prioridad[]>(K.prioridades(fecha))) ?? [];
   }
   guardarPrioridades(fecha: string, p: Prioridad[]) { return this.escribir(K.prioridades(fecha), p); }
 
   /* ── Reuniones y actas ─────────────────────────────────────────────────── */
 
-  async reuniones(): Promise<Reunion[]> { return (await this.repo.leer<Reunion[]>(K.reuniones)) ?? []; }
+  async reuniones(): Promise<Reunion[]> { return (await (await this.#puerta()).leer<Reunion[]>(K.reuniones)) ?? []; }
   guardarReuniones(r: Reunion[]) { return this.escribir(K.reuniones, r); }
 
   /* ── Derivaciones ──────────────────────────────────────────────────────── */
 
-  async derivaciones(): Promise<Derivacion[]> { return (await this.repo.leer<Derivacion[]>(K.derivaciones)) ?? []; }
+  async derivaciones(): Promise<Derivacion[]> { return (await (await this.#puerta()).leer<Derivacion[]>(K.derivaciones)) ?? []; }
   guardarDerivaciones(d: Derivacion[]) { return this.escribir(K.derivaciones, d); }
 
   async agregarDerivaciones(nuevas: Derivacion[]): Promise<void> {
@@ -158,7 +227,7 @@ export class Datos {
   /* ── Bandeja de pendientes ─────────────────────────────────────────────── */
 
   async pendientes(): Promise<Pendiente[]> {
-    return (await this.repo.leer<Pendiente[]>(K.pendientes)) ?? [];
+    return (await (await this.#puerta()).leer<Pendiente[]>(K.pendientes)) ?? [];
   }
   guardarPendientes(p: Pendiente[]) { return this.escribir(K.pendientes, p); }
 
@@ -173,13 +242,13 @@ export class Datos {
 
   /* ── Plan de la semana ─────────────────────────────────────────────────── */
 
-  plan(lunes: string) { return this.repo.leer<PlanSemana>(K.plan(lunes)); }
+  async plan(lunes: string) { return (await this.#puerta()).leer<PlanSemana>(K.plan(lunes)); }
   guardarPlan(plan: PlanSemana) { return this.escribir(K.plan(plan.lunes), plan); }
 
   /* ── Prueba de Luciana ─────────────────────────────────────────────────── */
 
   async prueba(id = 'luciana_2026_08'): Promise<RegistrosPrueba> {
-    return (await this.repo.leer<RegistrosPrueba>(K.prueba(id))) ?? {};
+    return (await (await this.#puerta()).leer<RegistrosPrueba>(K.prueba(id))) ?? {};
   }
   guardarPrueba(p: RegistrosPrueba, id = 'luciana_2026_08') { return this.escribir(K.prueba(id), p); }
 
@@ -193,13 +262,13 @@ export class Datos {
   /* ── Indicadores ───────────────────────────────────────────────────────── */
 
   async indicadores(): Promise<FilaIndicadores[]> {
-    return (await this.repo.leer<FilaIndicadores[]>(K.indicadores)) ?? [];
+    return (await (await this.#puerta()).leer<FilaIndicadores[]>(K.indicadores)) ?? [];
   }
   guardarIndicadores(i: FilaIndicadores[]) { return this.escribir(K.indicadores, i); }
 
   /* ── Documentos de Drive ───────────────────────────────────────────────── */
 
-  async docsIndice(): Promise<DocIndexado[]> { return (await this.repo.leer<DocIndexado[]>(K.docsIndice)) ?? []; }
+  async docsIndice(): Promise<DocIndexado[]> { return (await (await this.#puerta()).leer<DocIndexado[]>(K.docsIndice)) ?? []; }
   guardarDocsIndice(d: DocIndexado[]) { return this.escribir(K.docsIndice, d); }
   /**
    * El permiso de Google (Drive y Calendar) NUNCA sale de este dispositivo.
@@ -218,13 +287,13 @@ export class Datos {
 
   /* ── Configuración (las reglas editables) ──────────────────────────────── */
 
-  config<T>(): Promise<T | null> { return this.repo.leer<T>(K.config); }
+  async config<T>(): Promise<T | null> { return (await this.#puerta()).leer<T>(K.config); }
   guardarConfig<T>(c: T) { return this.escribir(K.config, c); }
 
   /* ── Ajustes ───────────────────────────────────────────────────────────── */
 
   async ajustes(): Promise<Ajustes> {
-    const guardado = (await this.repo.leer<Partial<Ajustes>>(K.ajustes)) ?? {};
+    const guardado = (await (await this.#puerta()).leer<Partial<Ajustes>>(K.ajustes)) ?? {};
     const a = { ...AJUSTES_POR_DEFECTO, ...guardado };
     // Un campo vacío guardado en versiones anteriores no tapa el valor de fábrica.
     if (!a.driveClientId) a.driveClientId = AJUSTES_POR_DEFECTO.driveClientId;
@@ -287,9 +356,9 @@ export class Datos {
 
   async exportar(): Promise<object> {
     const datos: Record<string, unknown> = {};
-    for (const clave of await this.repo.claves()) {
+    for (const clave of await (await this.#puerta()).claves()) {
       if (clave.startsWith('doc:') || clave.startsWith('drive:')) continue;
-      datos[clave] = await this.repo.leer(clave);
+      datos[clave] = await (await this.#puerta()).leer(clave);
     }
     return { app: 'agenda-emma', version: 2, exportado: new Date().toISOString(), datos };
   }
@@ -299,7 +368,7 @@ export class Datos {
     if (j?.app !== 'agenda-emma') throw new Error('Ese archivo no es un backup de esta app.');
     let n = 0;
     for (const [clave, valor] of Object.entries(j.datos ?? {})) {
-      await this.repo.escribir(clave, valor);
+      await (await this.#puerta()).escribir(clave, valor);
       n++;
     }
     this.#tocar();
@@ -307,28 +376,34 @@ export class Datos {
   }
 
   /** Sube lo que hay en este dispositivo a la nube. Se usa una sola vez. */
-  async subirLocalALaNube(): Promise<number> {
+  async subirLocalALaNube(): Promise<{ subidas: number; yaEstaban: number }> {
     const nube = this.#nube();
     if (!nube) throw new Error('Primero entrá con tu cuenta de Google.');
     this.sincronizando.set(true);
     try {
-      let n = 0;
+      let subidas = 0;
+      let yaEstaban = 0;
       for (const clave of await this.local.claves()) {
+        // El texto de los documentos y la llave de Google no van a la nube.
         if (clave.startsWith('doc:') || clave.startsWith('drive:')) continue;
         const valor = await this.local.leer(clave);
         if (valor === null) continue;
+        // Lo que la nube ya tiene no se pisa. Sin esto, una copia vieja que
+        // quedó en un aparato podría tapar algo más nuevo cargado en otro, y
+        // la única forma de darse cuenta sería extrañar el dato.
+        if ((await nube.leer(clave)) !== null) { yaEstaban++; continue; }
         await nube.escribir(clave, valor);
-        n++;
+        subidas++;
       }
       this.#tocar();
-      return n;
+      return { subidas, yaEstaban };
     } finally {
       this.sincronizando.set(false);
     }
   }
 
   async borrarTodo(): Promise<void> {
-    for (const clave of await this.repo.claves()) await this.repo.borrar(clave);
+    for (const clave of await (await this.#puerta()).claves()) await (await this.#puerta()).borrar(clave);
     this.#tocar();
   }
 }

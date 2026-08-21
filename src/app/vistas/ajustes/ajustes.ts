@@ -74,8 +74,12 @@ export class Ajustes {
   protected async subir(): Promise<void> {
     this.error.set('');
     try {
-      const n = await this.datos.subirLocalALaNube();
-      this.avisos.mostrar(`${n} registros subidos a la nube.`);
+      const { subidas, yaEstaban } = await this.datos.subirLocalALaNube();
+      this.avisos.mostrar(subidas
+        ? `${subidas} cosa(s) que estaban solo en este aparato subieron a la nube.`
+        : yaEstaban
+          ? 'No había nada suelto: la nube ya tenía todo lo de este aparato.'
+          : 'Este aparato no tenía nada guardado aparte.');
     } catch (e) { this.error.set(mensaje(e)); }
   }
 

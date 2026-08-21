@@ -52,6 +52,13 @@
   </nav>
 }
 
+@if (soloEsteAparato()) {
+  <a class="barra-version aviso-local" routerLink="/ajustes">
+    <span class="crece">Estás viendo solo lo de este aparato.</span>
+    <span class="btn-falso">Entrar con tu cuenta</span>
+  </a>
+}
+
 @if (actualizador.estado() === 'hay-nueva') {
   <div class="barra-version" role="status">
     <span class="crece">Hay una versión nueva de la app.</span>

@@ -26,6 +26,14 @@ export class App {
   protected readonly actualizador = inject(Actualizador);
   private readonly cfg = inject(Configuracion);
 
+  /**
+   * Hay proyecto en la nube pero esta sesión está trabajando contra el aparato.
+   * Sin decirlo, la app se ve igual que siempre y simplemente le faltan cosas:
+   * la explicación más razonable desde afuera es que se perdieron.
+   */
+  protected readonly soloEsteAparato = computed(() =>
+    this.datos.firebase.hayConfig() && this.datos.decidido() && this.datos.modo() === 'local');
+
   protected readonly tabs: Tab[] = [
     { ruta: '/hoy', texto: 'Hoy', icono: 'M12 3v18M3 12h18' },
     { ruta: '/agenda', texto: 'Agenda', icono: 'M4 5h16v15H4zM4 9h16M9 5V3M15 5V3M8 13h3M8 17h6' },
