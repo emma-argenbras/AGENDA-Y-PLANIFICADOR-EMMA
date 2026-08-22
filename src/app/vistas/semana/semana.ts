@@ -36,6 +36,7 @@ export class Semana {
   private readonly cfg = inject(Configuracion);
 
   protected readonly hoy = hoyISO();
+  protected readonly fechaCorta = fechaCorta;
   protected readonly lunes = signal(inicioSemana(this.hoy));
   protected readonly categorias = computed(() => this.cfg.reglas().categorias);
   protected readonly verNumeros = signal(false);
@@ -55,6 +56,7 @@ export class Semana {
         todo,
         semana: todo.filter(c => dias.includes(c.fecha)),
         plan: await this.datos.plan(params.lunes),
+        planAnterior: await this.datos.plan(sumarDias(params.lunes, -7)),
         pendientes: await this.datos.pendientes(),
       };
     },
@@ -108,6 +110,17 @@ export class Semana {
   });
 
   protected mover(semanas: number): void { this.lunes.set(sumarDias(this.lunes(), semanas * 7)); }
+
+  /**
+   * Una semana que se pasó sin cerrar no volvía a aparecer nunca: el ritual la
+   * ofrece viernes y sábado, y pasado ese rato quedaba enterrada con sus
+   * objetivos adentro. Cerrarla tarde sigue sirviendo; no cerrarla nunca hace
+   * que la siguiente se arme sin saber qué pasó.
+   */
+  protected readonly anteriorSinCerrar = computed(() => {
+    const p = this.datosSemana.value()?.planAnterior;
+    return p && !p.cerrado && p.objetivos.length ? p : null;
+  });
 
   /* ── Plan de la semana ─────────────────────────────────────────────────── */
 

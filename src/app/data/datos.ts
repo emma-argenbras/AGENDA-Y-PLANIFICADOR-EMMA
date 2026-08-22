@@ -438,8 +438,20 @@ export class Datos {
     }
   }
 
+  /**
+   * Borra los datos de los dos lados.
+   *
+   * Antes vaciaba solo el que estuviera activo: borrando desde la nube, la
+   * copia del aparato quedaba entera y volvía a aparecer en cuanto la app
+   * arrancaba sin sesión. Un «borrar todo» que deja cosas es peor que no
+   * tenerlo, porque el que lo usó se quedó tranquilo.
+   */
   async borrarTodo(): Promise<void> {
-    for (const clave of await (await this.#puerta()).claves()) await (await this.#puerta()).borrar(clave);
+    const repo = await this.#puerta();
+    for (const clave of await repo.claves()) await repo.borrar(clave);
+    if (repo !== this.local) {
+      for (const clave of await this.local.claves()) await this.local.borrar(clave);
+    }
     this.#tocar();
   }
 }

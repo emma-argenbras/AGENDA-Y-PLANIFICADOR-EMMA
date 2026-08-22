@@ -61,6 +61,17 @@
   </div>
 }
 
+@if (anteriorSinCerrar(); as previa) {
+  <div class="tarjeta alerta" style="margin-bottom:12px">
+    <span class="fuerte">La semana del {{ fechaCorta(previa.lunes) }} quedó sin cerrar</span>
+    <p class="mini" style="margin:4px 0 10px">
+      Sus {{ previa.objetivos.length }} objetivo(s) siguen ahí sin resultado. Cerrarla tarde
+      sirve igual: sin ese cierre, la que estás armando no sabe qué pasó con la anterior.
+    </p>
+    <button class="btn primario ancho" type="button" (click)="mover(-1)">Ir a cerrarla</button>
+  </div>
+}
+
 @if (objetivos().length) {
   <div class="fila sep" style="margin-bottom:12px">
     <a class="btn chico" routerLink="/pendientes">Ver la bandeja</a>
