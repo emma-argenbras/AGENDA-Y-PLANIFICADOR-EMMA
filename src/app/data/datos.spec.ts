@@ -24,7 +24,12 @@ class RepoDePrueba implements Repositorio {
   async escribir<T>(clave: string, valor: T): Promise<void> { this.datos.set(clave, valor); }
   async borrar(clave: string): Promise<void> { this.datos.delete(clave); }
   async claves(): Promise<string[]> { return [...this.datos.keys()]; }
-  async rango<T>(): Promise<{ clave: string; valor: T }[]> { return []; }
+  async rango<T>(desde: string, hasta: string): Promise<{ clave: string; valor: T }[]> {
+    return [...this.datos.entries()]
+      .filter(([k]) => k >= desde && k <= hasta)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([clave, valor]) => ({ clave, valor: valor as T }));
+  }
 }
 
 /** Firebase falso: deja mover el estado de la sesión a mano. */
@@ -115,5 +120,53 @@ describe('con proyecto, mientras la sesión no resolvió', () => {
     TestBed.tick();
     await datos.escribir('x', 1);
     expect(datos.decidido()).toBe(true);
+  });
+});
+
+describe('prioridades que quedaron abiertas otros días', () => {
+  const HOY = '2026-08-22';
+  const AYER = '2026-08-21';
+  const prio = (id: string, texto: string, hecha = false) =>
+    ({ id, texto, hecha, creado: 1, categoria: null });
+
+  async function conDatos() {
+    const m = montar(false);
+    await m.datos.guardarPrioridades(AYER, [prio('a', 'llamar a Ruiz'), prio('b', 'ya hecha', true)]);
+    return m;
+  }
+
+  it('se pueden encontrar: no estaban perdidas, estaban bajo otra fecha', async () => {
+    const { datos } = await conDatos();
+    const abiertas = (await datos.prioridadesEntre('2026-08-15', AYER)).filter(p => !p.hecha);
+    expect(abiertas).toHaveLength(1);
+    expect(abiertas[0]!.texto).toBe('llamar a Ruiz');
+    expect(abiertas[0]!.fecha).toBe(AYER);
+  });
+
+  it('se puede marcar hecha una de ayer, sin tocar el resto del día', async () => {
+    const { datos } = await conDatos();
+    await datos.cerrarPrioridad(AYER, 'a');
+    const dia = await datos.prioridades(AYER);
+    expect(dia.every(p => p.hecha)).toBe(true);
+    expect(dia).toHaveLength(2);
+  });
+
+  it('traerla a hoy la mueve: no quedan dos copias de la misma tarea', async () => {
+    const { datos } = await conDatos();
+    expect(await datos.traerAHoy(AYER, 'a', HOY)).toBe('ok');
+    expect((await datos.prioridades(AYER)).map(p => p.id)).toEqual(['b']);
+    expect((await datos.prioridades(HOY)).map(p => p.texto)).toEqual(['llamar a Ruiz']);
+  });
+
+  it('el tope de tres sigue valiendo para lo que viene de atrás', async () => {
+    const { datos } = await conDatos();
+    await datos.guardarPrioridades(HOY, [prio('1', 'x'), prio('2', 'y'), prio('3', 'z')]);
+    expect(await datos.traerAHoy(AYER, 'a', HOY)).toBe('lleno');
+    expect(await datos.prioridades(AYER)).toHaveLength(2);   // no se movió nada
+  });
+
+  it('una prioridad hecha que ya no existe no rompe nada', async () => {
+    const { datos } = await conDatos();
+    expect(await datos.traerAHoy(AYER, 'fantasma', HOY)).toBe('no-esta');
   });
 });

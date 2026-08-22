@@ -43,17 +43,13 @@
     </a>
     <a routerLink="/config" (click)="cerrarMenu()">
       <span class="fuerte">Configuración</span>
-      <span class="mini">Desde cuándo cuenta, equipo, tabla y umbrales</span>
-    </a>
-    <a routerLink="/ajustes" (click)="cerrarMenu()">
-      <span class="fuerte">Ajustes</span>
-      <span class="mini">Nube, Drive, avisos y backup</span>
+      <span class="mini">Todo: reglas, equipo, nube, Google, avisos y backup</span>
     </a>
   </nav>
 }
 
 @if (soloEsteAparato()) {
-  <a class="barra-version aviso-local" routerLink="/ajustes">
+  <a class="barra-version aviso-local" routerLink="/config">
     <span class="crece">Estás viendo solo lo de este aparato.</span>
     <span class="btn-falso">Entrar con tu cuenta</span>
   </a>

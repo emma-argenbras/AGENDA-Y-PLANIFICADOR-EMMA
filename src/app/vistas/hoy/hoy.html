@@ -230,6 +230,30 @@
 }
 
 <!-- ── Últimos días ─────────────────────────────────────────────────────── -->
+@if (sinCerrar().length) {
+  <h2 class="seccion">Quedó abierto de otros días</h2>
+  <div class="tarjeta">
+    <p class="mini" style="margin:0 0 10px">
+      Se guardan por día, así que estas no desaparecieron: quedaron bajo una fecha que ya pasó.
+      Cerralas o traelas a hoy, pero no las dejes acá.
+    </p>
+    <ul class="limpia">
+      @for (p of sinCerrar(); track p.fecha + p.id) {
+        <li class="vieja">
+          <div class="crece">
+            <div>{{ p.texto }}</div>
+            <div class="mini">{{ fechaCorta(p.fecha) }} · hace {{ diasAbierta(p.fecha) }} día(s)</div>
+          </div>
+          <div class="btn-fila">
+            <button class="btn chico" type="button" (click)="cerrarVieja(p)">Hecha</button>
+            <button class="btn chico primario" type="button" (click)="traerAHoy(p)">Traer a hoy</button>
+          </div>
+        </li>
+      }
+    </ul>
+  </div>
+}
+
 <h2 class="seccion">Últimos días</h2>
 <div class="tarjeta">
   <ul class="limpia">

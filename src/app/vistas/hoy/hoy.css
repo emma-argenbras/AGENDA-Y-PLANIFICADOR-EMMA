@@ -91,3 +91,14 @@ a { color: var(--acento); }
 }
 .ritual .mini { color: inherit; opacity: .85; }
 .ritual .flecha { font-size: 22px; opacity: .8; }
+
+/* Lo que quedó abierto otros días: el texto arriba, las dos salidas abajo. */
+.vieja {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--borde);
+}
+.vieja:last-child { border-bottom: 0; }
+.vieja .btn-fila .btn { flex: 1; }

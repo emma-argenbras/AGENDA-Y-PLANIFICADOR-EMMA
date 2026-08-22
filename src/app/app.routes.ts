@@ -15,6 +15,7 @@ export const routes: Routes = [
   { path: 'ritual', title: 'Cerrar y armar la semana', loadComponent: () => import('./vistas/ritual/ritual').then(m => m.Ritual) },
   { path: 'ayuda', title: 'Cómo se usa', loadComponent: () => import('./vistas/ayuda/ayuda').then(m => m.Ayuda) },
   { path: 'config', title: 'Configuración', loadComponent: () => import('./vistas/config/config').then(m => m.Config) },
-  { path: 'ajustes', title: 'Ajustes', loadComponent: () => import('./vistas/ajustes/ajustes').then(m => m.Ajustes) },
+  // Ajustes se fusionó con Configuración: los enlaces viejos siguen andando.
+  { path: 'ajustes', redirectTo: 'config' },
   { path: '**', redirectTo: 'hoy' },
 ];

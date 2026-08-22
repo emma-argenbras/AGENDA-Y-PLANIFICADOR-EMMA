@@ -69,6 +69,7 @@ export class Hoy {
       eventos: await this.datos.eventos(this.hoy),
       cierres: await this.datos.cierresDePruebas(this.cfg.reglas().pruebas.map(p => p.id)),
       inicio: await this.datos.desdeCuando(),
+      sinCerrar: await this.datos.prioridadesEntre(sumarDias(this.hoy, -14), sumarDias(this.hoy, -1)),
       planProximo: await this.datos.plan(sumarDias(inicioSemana(this.hoy), 7)),
       pendientes: await this.datos.pendientes(),
       reuniones: await this.datos.reuniones(),
@@ -82,6 +83,40 @@ export class Hoy {
   protected readonly ultimos = computed(() => this.datosDelDia.value()?.ultimos ?? []);
   protected readonly totalHoy = computed(() =>
     (this.checkin()?.segmentos ?? []).reduce((a, s) => a + (s.horas || 0), 0));
+
+  /* ── Lo que quedó abierto otros días ───────────────────────────────────── */
+
+  /**
+   * Una prioridad que no se cerró ayer no aparecía en ningún lado hoy: seguía
+   * guardada bajo una fecha que ya nadie mira. No estaba perdida, pero se
+   * sentía igual, y encima no había forma de marcarla hecha.
+   *
+   * Se muestran las más viejas primero: la que lleva más días abierta es la
+   * que más merece una decisión.
+   */
+  protected readonly sinCerrar = computed(() => {
+    const inicio = this.datosDelDia.value()?.inicio ?? null;
+    return (this.datosDelDia.value()?.sinCerrar ?? [])
+      .filter(p => !p.hecha && (!inicio || p.fecha >= inicio))
+      .sort((a, b) => a.fecha.localeCompare(b.fecha));
+  });
+
+  protected diasAbierta(fecha: string): number {
+    return Math.max(1, Math.round(
+      (Date.parse(this.hoy + 'T00:00:00') - Date.parse(fecha + 'T00:00:00')) / 86400000));
+  }
+
+  protected async cerrarVieja(p: { fecha: string; id: string }): Promise<void> {
+    await this.datos.cerrarPrioridad(p.fecha, p.id);
+    this.avisos.mostrar('Marcada hecha. Tarde, pero hecha.');
+  }
+
+  protected async traerAHoy(p: { fecha: string; id: string; texto: string }): Promise<void> {
+    const r = await this.datos.traerAHoy(p.fecha, p.id, this.hoy);
+    if (r === 'lleno') { this.avisos.mostrar('Ya tenés 3 prioridades hoy. Cerrá una primero.'); return; }
+    if (r === 'no-esta') { this.avisos.mostrar('Esa prioridad ya no está.'); return; }
+    this.avisos.mostrar('Pasó a hoy.');
+  }
 
   /* ── Tu día ────────────────────────────────────────────────────────────── */
 

@@ -22,6 +22,7 @@ import { Datos } from '../../data/datos';
 import { Configuracion } from '../../data/configuracion';
 import { Avisos } from '../../ui/avisos';
 import { Dialogo } from '../../ui/dialogo';
+import { Ajustes } from '../ajustes/ajustes';
 import { fechaCorta, fechaLarga, hoyISO } from '../../core/fechas';
 import { viernesEntre } from '../../core/pruebas';
 import type { PruebaDeRol, Senal, TipoSenal } from '../../core/prueba-luciana';
@@ -37,7 +38,7 @@ import type {
 @Component({
   selector: 'app-config',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, Dialogo],
+  imports: [RouterLink, Dialogo, Ajustes],
   templateUrl: './config.html',
   styleUrl: './config.css',
 })

@@ -70,13 +70,31 @@ export class Agenda {
       // cosas distintas, y la pantalla las confundía en una sola: decía
       // «todavía nunca entró» tanto si faltaba el permiso como si no había
       // eventos.
-      googleOk: await this.drive.conectado(),
+      permiso: await this.drive.estadoPermiso(),
       calendarOk: await this.drive.tieneCalendario(),
     }),
   });
 
-  protected readonly googleOk = computed(() => this.datosSemana.value()?.googleOk ?? false);
+  protected readonly permiso = computed(() => this.datosSemana.value()?.permiso ?? 'nunca');
   protected readonly calendarOk = computed(() => this.datosSemana.value()?.calendarOk ?? true);
+  protected readonly renovando = signal(false);
+
+  /**
+   * Renovar es un viaje a Google y vuelta. Cuando ya se dio el permiso alguna
+   * vez no hay nada que tocar del otro lado —Google rebota derecho—, pero la
+   * pantalla se va y vuelve, así que conviene decirlo antes de que pase.
+   */
+  protected async renovar(): Promise<void> {
+    this.renovando.set(true);
+    try {
+      if (!(await this.drive.renovar())) this.errorImport.set('No había un permiso vencido para renovar.');
+      await this.calendario.importarSiCorresponde(this.lunes(), sumarDias(this.lunes(), 6));
+    } catch (e) {
+      this.errorImport.set(e instanceof Error ? e.message : String(e));
+    } finally {
+      this.renovando.set(false);
+    }
+  }
 
   protected readonly eventos = computed(() => this.datosSemana.value()?.eventos ?? []);
   protected readonly choques = computed(() => solapados(this.eventos()));

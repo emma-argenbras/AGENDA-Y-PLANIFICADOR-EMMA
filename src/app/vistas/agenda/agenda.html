@@ -105,12 +105,23 @@
 <!-- ── Google Calendar ──────────────────────────────────────────────────── -->
 <h2 class="seccion">Google Calendar</h2>
 <div class="tarjeta">
-  @if (!googleOk()) {
+  @if (permiso() === 'vencido') {
+    <span class="fuerte">El permiso de Google venció</span>
+    <p class="mini" style="margin:4px 0 10px">
+      Google los da por una hora y no hay forma de estirarlo desde una app sin servidor. Lo que
+      ya se trajo sigue acá; para traer lo nuevo hace falta renovarlo. Es un toque: como ya lo
+      diste una vez, no vuelve a preguntarte nada, solo parpadea la pantalla.
+    </p>
+    <button class="btn primario ancho" type="button" [disabled]="renovando()" (click)="renovar()">
+      {{ renovando() ? 'Renovando…' : 'Renovar permiso y traer' }}
+    </button>
+  } @else if (permiso() === 'nunca') {
     @if (ultimaSync()) {
-      <span class="fuerte">El calendario se trae desde otro aparato</span>
+      <span class="fuerte">El calendario lo trae otro aparato</span>
       <p class="mini" style="margin:4px 0 10px">
-        Última vez: {{ ultimaSync() }}. Los eventos llegan igual, porque lo traído se sincroniza.
-        Conectá acá también solo si querés que este aparato pueda actualizarlo por su cuenta.
+        Última vez: {{ ultimaSync() }}. Los eventos llegan igual —lo traído se sincroniza—, así
+        que no hay nada que arreglar. Conectá acá también solo si querés que este aparato pueda
+        actualizarlo por su cuenta.
       </p>
     } @else {
       <span class="fuerte">Falta darle permiso a Google</span>
@@ -119,7 +130,7 @@
         está, lo segundo todavía no. El permiso vale por aparato y no viaja con la cuenta.
       </p>
     }
-    <a class="btn primario ancho" routerLink="/ajustes">Ir a Ajustes y conectar</a>
+    <a class="btn primario ancho" routerLink="/config">Ir a Configuración y conectar</a>
   } @else {
     @if (!calendarOk()) {
       <p class="error" style="margin:0 0 10px">

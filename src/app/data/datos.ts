@@ -204,6 +204,42 @@ export class Datos {
 
   /* ── Prioridades ───────────────────────────────────────────────────────── */
 
+  /**
+   * Prioridades de varios días, con su fecha puesta.
+   *
+   * Las prioridades se guardan por día, así que una que no se cerró ayer no
+   * aparece en ningún lado hoy: no se perdió, quedó guardada bajo una fecha
+   * que ya nadie mira. Eso se siente igual que perderla.
+   */
+  async prioridadesEntre(desde: string, hasta: string): Promise<(Prioridad & { fecha: string })[]> {
+    const filas = await (await this.#puerta()).rango<Prioridad[]>(
+      K.prioridades(desde), K.prioridades(hasta));
+    return filas.flatMap(f => (f.valor ?? []).map(p =>
+      ({ ...p, fecha: f.clave.slice('prio:'.length) })));
+  }
+
+  /** Marca hecha una prioridad de cualquier día, no solo del de hoy. */
+  async cerrarPrioridad(fecha: string, id: string): Promise<void> {
+    const dia = await this.prioridades(fecha);
+    await this.guardarPrioridades(fecha, dia.map(p => (p.id === id ? { ...p, hecha: true } : p)));
+  }
+
+  /**
+   * Trae a hoy algo que quedó abierto otro día. Se mueve, no se copia: dos
+   * copias de la misma tarea en dos días es la forma más rápida de que ninguna
+   * de las dos se sienta real.
+   */
+  async traerAHoy(fecha: string, id: string, hoy: string): Promise<'ok' | 'lleno' | 'no-esta'> {
+    const dia = await this.prioridades(fecha);
+    const p = dia.find(x => x.id === id);
+    if (!p) return 'no-esta';
+    const deHoy = await this.prioridades(hoy);
+    if (deHoy.filter(x => !x.hecha).length >= 3) return 'lleno';
+    await this.guardarPrioridades(fecha, dia.filter(x => x.id !== id));
+    await this.guardarPrioridades(hoy, [...deHoy, { ...p, creado: Date.now() }]);
+    return 'ok';
+  }
+
   async prioridades(fecha: string): Promise<Prioridad[]> {
     return (await (await this.#puerta()).leer<Prioridad[]>(K.prioridades(fecha))) ?? [];
   }

@@ -1,9 +1,12 @@
 /**
- * ajustes.ts — Lo único configurable: nube, Drive, avisos, tema y backup.
- * Las reglas de negocio no están acá a propósito.
+ * ajustes.ts — La mitad de Configuración que habla del aparato y las cuentas:
+ * la nube, Google, los avisos, el aspecto y el backup.
+ *
+ * No es una pantalla: se dibuja dentro de Configuración. Tener dos lugares
+ * separados obligaba a acordarse de en cuál estaba cada cosa, que es
+ * exactamente el trabajo que la app tendría que ahorrar.
  */
 
-import { RouterLink } from '@angular/router';
 import { Component, computed, inject, linkedSignal, resource, signal, ChangeDetectionStrategy } from '@angular/core';
 import { Datos } from '../../data/datos';
 import { Drive } from '../../data/drive';
@@ -19,7 +22,7 @@ import { hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
 @Component({
   selector: 'app-ajustes',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Dialogo, RouterLink],
+  imports: [Dialogo],
   templateUrl: './ajustes.html',
   styleUrl: './ajustes.css',
 })

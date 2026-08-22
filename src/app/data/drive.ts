@@ -76,6 +76,39 @@ export class Drive {
     return t && t.expira > Date.now() + 60_000 ? t.access_token : null;
   }
 
+  /**
+   * En qué anda el permiso de este aparato.
+   *
+   * Google entrega permisos que duran una hora y no da forma de renovarlos sin
+   * pasar otra vez por él: no existe el «conectado para siempre» desde una app
+   * sin servidor. Distinguir «venció» de «nunca lo diste» importa, porque el
+   * primero se arregla con un toque y el segundo con todo el trámite.
+   */
+  async estadoPermiso(): Promise<'ok' | 'vencido' | 'nunca'> {
+    const t = await this.datos.tokenGoogle<Token>();
+    if (!t?.access_token) return 'nunca';
+    return t.expira > Date.now() + 60_000 ? 'ok' : 'vencido';
+  }
+
+  /**
+   * Renueva un permiso vencido sin volver a pedir nada.
+   *
+   * Cuando el permiso ya se dio alguna vez, Google no vuelve a mostrar la
+   * pantalla de casillas: rebota derecho con uno nuevo. Se ve un parpadeo, no
+   * un trámite. Devuelve false si no había nada que renovar.
+   */
+  async renovar(): Promise<boolean> {
+    if ((await this.estadoPermiso()) !== 'vencido') return false;
+    const { driveClientId } = await this.datos.ajustes();
+    if (!driveClientId) return false;
+    if (this.#esAppInstalada()) {
+      await this.#irAGoogle(driveClientId, false);
+      return true;   // la página se va: lo que sigue no corre
+    }
+    await this.conectar();
+    return true;
+  }
+
   /** Los permisos que Google efectivamente dio en la última conexión. */
   async permisos(): Promise<string[]> {
     const t = await this.datos.tokenGoogle<Token>();
@@ -171,9 +204,9 @@ export class Drive {
   }
 
   /** Sale a Google por redirección, guardando a dónde volver. */
-  async #irAGoogle(clientId: string): Promise<void> {
+  async #irAGoogle(clientId: string, pedirDeNuevo = true): Promise<void> {
     const estado = crypto.randomUUID();
-    sessionStorage.setItem(VUELTA, JSON.stringify({ estado, ruta: location.hash || '#/ajustes' }));
+    sessionStorage.setItem(VUELTA, JSON.stringify({ estado, ruta: location.hash || '#/config' }));
     const url = new URL(AUTORIZAR);
     url.searchParams.set('client_id', clientId);
     url.searchParams.set('redirect_uri', new URL(document.baseURI).href);
@@ -181,7 +214,9 @@ export class Drive {
     url.searchParams.set('scope', ALCANCE);
     url.searchParams.set('include_granted_scopes', 'true');
     url.searchParams.set('state', estado);
-    url.searchParams.set('prompt', 'consent');
+    // La primera vez se fuerzan las casillas, para que se vean las dos. En una
+    // renovación no: forzarlas convertiría un parpadeo en un trámite.
+    if (pedirDeNuevo) url.searchParams.set('prompt', 'consent');
     location.assign(url.toString());
   }
 
@@ -199,7 +234,7 @@ export class Drive {
     sessionStorage.removeItem(VUELTA);
     const { estado, ruta } = pendiente
       ? JSON.parse(pendiente) as { estado: string; ruta: string }
-      : { estado: '', ruta: '#/ajustes' };
+      : { estado: '', ruta: '#/config' };
 
     const queja = params.get('error');
     if (queja) this.errorDeGoogle.set(traducir(queja));
@@ -217,7 +252,7 @@ export class Drive {
         alcance: params.get('scope') ?? '',
       });
     }
-    history.replaceState(null, '', new URL(ruta || '#/ajustes', document.baseURI).href);
+    history.replaceState(null, '', new URL(ruta || '#/config', document.baseURI).href);
     return ok;
   }
 

@@ -158,7 +158,7 @@ await paso('agenda: sin permiso de Google lo dice, en vez de decir que nunca ent
   // Antes las dos daban el mismo cartel y no se sabía cuál faltaba.
   if (!t.includes('Falta darle permiso a Google')) throw new Error('no distingue permiso de «sin eventos»');
   if (t.includes('Todavía nunca entró')) throw new Error('sigue diciendo que nunca entró');
-  await p.waitForSelector('a[href="#/ajustes"]:has-text("conectar")');
+  await p.waitForSelector('a[href="#/config"]:has-text("conectar")');
 });
 
 await paso('agenda: una reunión se puede cerrar con acta', async () => {
@@ -467,6 +467,8 @@ await paso('configuración: abre desde el menú y todo arranca de fábrica', asy
   await p.click('button[aria-label="Más pantallas"]');
   await p.click('.menu a[href="#/config"]');
   await p.waitForSelector('h1:has-text("Configuración")');
+  // El menú tiene una sola entrada de configuración: no hay dos lugares.
+  if (await p.locator('.menu a[href="#/ajustes"]').count()) throw new Error('quedó Ajustes suelto en el menú');
   const secciones = await p.locator('[data-seccion]').count();
   if (secciones < 9) throw new Error('faltan secciones: ' + secciones);
   const fabrica = await p.locator('.marca.fabrica').count();
@@ -594,8 +596,8 @@ await paso('el instructivo abre desde el menú y los desplegables funcionan', as
   await p.waitForSelector('.duda p');
 });
 
-await paso('ajustes: hay botón de actualización manual', async () => {
-  await p.goto(URL + '#/ajustes');
+await paso('configuración: hay botón de actualización manual', async () => {
+  await p.goto(URL + '#/config');
   await p.waitForSelector('text=Versión de la app');
   const publicada = await p.textContent('.tarjeta:has-text("Publicada")');
   if (!/Publicada: \d/.test(publicada)) throw new Error('no muestra la fecha de la versión publicada');
@@ -605,8 +607,8 @@ await paso('ajustes: hay botón de actualización manual', async () => {
     .first().waitFor({ timeout: 20000 });
 });
 
-await paso('ajustes: muestra la dirección exacta que Google tiene que autorizar', async () => {
-  await p.goto(URL + '#/ajustes');
+await paso('configuración: muestra la dirección exacta que Google tiene que autorizar', async () => {
+  await p.goto(URL + '#/config');
   await p.click('button:has-text("redirect_uri_mismatch")');
   const campos = p.locator('input[readonly]');
   const uri = await campos.nth(0).inputValue();
@@ -619,8 +621,8 @@ await paso('ajustes: muestra la dirección exacta que Google tiene que autorizar
   if (!/^https?:\/\//.test(origen)) throw new Error('el origen no es una dirección: ' + origen);
 });
 
-await paso('ajustes: probar la conexión dice qué falta, en un toque', async () => {
-  await p.goto(URL + '#/ajustes');
+await paso('configuración: probar la conexión dice qué falta, en un toque', async () => {
+  await p.goto(URL + '#/config');
   await p.click('button:has-text("Probar la conexión con Google")');
   // Sin permiso en este aparato, la respuesta tiene que ser esa y no un error genérico.
   await p.waitForSelector('.tarjeta.alerta:has-text("no tiene permiso")', { timeout: 20000 });
@@ -628,8 +630,8 @@ await paso('ajustes: probar la conexión dice qué falta, en un toque', async ()
   if (!t.includes('por aparato')) throw new Error('no explica que el permiso no viaja entre aparatos');
 });
 
-await paso('ajustes: se puede cambiar el tema', async () => {
-  await p.goto(URL + '#/ajustes');
+await paso('configuración: se puede cambiar el tema', async () => {
+  await p.goto(URL + '#/config');
   await p.click('.chip:has-text("Oscuro")');
   await p.waitForFunction(() => document.documentElement.dataset.theme === 'oscuro');
 });
