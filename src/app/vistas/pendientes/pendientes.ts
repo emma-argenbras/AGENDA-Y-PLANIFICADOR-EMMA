@@ -118,6 +118,37 @@ export class Pendientes {
   protected readonly objetivoNuevo = signal<string | null>(null);
   protected readonly bloqueo = signal<{ texto: string; delegacion: Delegacion } | null>(null);
 
+  /* ── Corregir el texto de un pendiente ─────────────────────────────────── */
+
+  protected readonly corrigiendo = signal<Pendiente | null>(null);
+  protected readonly textoCorregido = signal('');
+  protected readonly errorCorreccion = signal('');
+
+  protected corregir(p: Pendiente): void {
+    this.errorCorreccion.set('');
+    this.textoCorregido.set(p.texto);
+    this.corrigiendo.set(p);
+  }
+
+  protected async guardarCorreccion(): Promise<void> {
+    const p = this.corrigiendo();
+    const texto = this.textoCorregido().trim();
+    if (!p || !texto) return;
+    if (texto === p.texto) { this.corrigiendo.set(null); return; }
+
+    // El mismo filtro que al escribirlo: corregir no puede ser la puerta de
+    // atrás para meter en la bandeja algo que tiene otro dueño.
+    const ev = evaluarPrioridad(texto);
+    if (!ev.permitida && ev.delegacion) {
+      this.errorCorreccion.set(
+        `Así escrito es de ${ev.delegacion.duenoNombre}: ${ev.delegacion.tarea}.`);
+      return;
+    }
+    await this.datos.actualizarPendiente(p.id, { texto });
+    this.corrigiendo.set(null);
+    this.avisos.mostrar('Corregido.');
+  }
+
   protected async agregar(): Promise<void> {
     const texto = this.nuevo().trim();
     if (!texto) return;

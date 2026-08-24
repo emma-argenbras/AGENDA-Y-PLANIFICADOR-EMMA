@@ -218,6 +218,21 @@ export class Datos {
       ({ ...p, fecha: f.clave.slice('prio:'.length) })));
   }
 
+  /**
+   * Corrige el texto de una prioridad, de hoy o de cualquier día.
+   *
+   * La categoría se recalcula con el texto nuevo: si no, una prioridad
+   * corregida seguiría contando las horas donde la puso el texto viejo, que es
+   * la clase de error que después no se encuentra.
+   */
+  async renombrarPrioridad(
+    fecha: string, id: string, texto: string, categoria: string | null,
+  ): Promise<void> {
+    const dia = await this.prioridades(fecha);
+    await this.guardarPrioridades(fecha,
+      dia.map(p => (p.id === id ? { ...p, texto, categoria } : p)));
+  }
+
   /** Marca hecha una prioridad de cualquier día, no solo del de hoy. */
   async cerrarPrioridad(fecha: string, id: string): Promise<void> {
     const dia = await this.prioridades(fecha);

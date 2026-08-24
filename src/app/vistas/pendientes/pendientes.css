@@ -17,3 +17,16 @@
 a { color: var(--acento); }
 
 .marca-hora { color: var(--acento); font-weight: 620; }
+
+/* El texto del pendiente es un botón: se toca y se corrige. */
+.texto-editable {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}

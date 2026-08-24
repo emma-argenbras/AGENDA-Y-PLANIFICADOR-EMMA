@@ -71,7 +71,8 @@
   <div class="tarjeta pendiente" [class.alerta]="estancado(p)">
     <div class="fila" style="align-items:flex-start;gap:10px">
       <div class="crece">
-        <div class="texto">{{ p.texto }}</div>
+        <button class="texto texto-editable" type="button" (click)="corregir(p)"
+                [attr.aria-label]="'Corregir: ' + p.texto">{{ p.texto }}</button>
         <div class="meta">
           @if (estancado(p)) {
             <span class="marca-roja">{{ diasQuieto(p) }} días sin hacerse</span>
@@ -182,4 +183,19 @@
   </label>
   <button pie class="btn peligro" type="button" (click)="matar()">Descartarlo</button>
   <button pie class="btn" type="button" (click)="matando.set(null)">Cancelar</button>
+</app-dialogo>
+
+<!-- ── Corregir el texto de un pendiente ────────────────────────────────── -->
+<app-dialogo [abierto]="!!corrigiendo()" titulo="Corregir el pendiente"
+             (cerrar)="corrigiendo.set(null)">
+  <label class="campo">
+    <span>Cómo debería decir</span>
+    <input type="text" [value]="textoCorregido()" enterkeyhint="done"
+           (input)="textoCorregido.set($any($event.target).value)"
+           (keydown.enter)="guardarCorreccion()">
+  </label>
+  <p class="mini">Al guardar se vuelve a mirar de quién es la tarea.</p>
+  @if (errorCorreccion()) { <p class="error">{{ errorCorreccion() }}</p> }
+  <button pie class="btn primario" type="button" (click)="guardarCorreccion()">Guardar</button>
+  <button pie class="btn" type="button" (click)="corrigiendo.set(null)">Cancelar</button>
 </app-dialogo>

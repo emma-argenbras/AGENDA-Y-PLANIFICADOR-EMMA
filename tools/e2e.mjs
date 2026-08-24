@@ -98,6 +98,30 @@ await paso('acepta una prioridad que sí es tuya', async () => {
   await p.waitForSelector('text=Prioridades de hoy (1/3)');
 });
 
+await paso('se puede corregir una prioridad mal escrita', async () => {
+  await p.goto(URL + '#/hoy');
+  await p.click('.prioridad .texto-editable');
+  await p.waitForSelector('dialog[open]:has-text("Corregir la prioridad")');
+  await p.fill('dialog[open] input[type=text]', 'Definir el margen mínimo de cielorrasos');
+  await p.click('dialog[open] .pie .btn.primario');
+  await sinDialogo();
+  await p.waitForSelector('.prioridad:has-text("Definir el margen mínimo de cielorrasos")');
+});
+
+await paso('corregir no es la puerta de atrás para saltear la tabla', async () => {
+  await p.click('.prioridad .texto-editable');
+  await p.waitForSelector('dialog[open]:has-text("Corregir la prioridad")');
+  await p.fill('dialog[open] input[type=text]', 'cargar el presupuesto de Ruiz');
+  await p.click('dialog[open] .pie .btn.primario');
+  // El diálogo NO se cierra: explica de quién es y deja volver a escribir.
+  const t = await p.textContent('dialog[open] .error');
+  if (!t.includes('Comercial de la unidad')) throw new Error('no nombra al dueño real: ' + t);
+  await p.fill('dialog[open] input[type=text]', 'Revisar los números del mes');
+  await p.click('dialog[open] .pie .btn.primario');
+  await sinDialogo();
+  await p.waitForSelector('.prioridad:has-text("Revisar los números del mes")');
+});
+
 await paso('check-in de una frase: clasifica y marca lo ajeno', async () => {
   await p.fill('textarea', 'Cargué pedidos toda la mañana y después reunión de directorio');
   await p.click('button:has-text("Guardar")');

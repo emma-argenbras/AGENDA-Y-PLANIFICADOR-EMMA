@@ -244,6 +244,38 @@ export class Hoy {
   protected readonly objetivoElegido = signal<string | null>(null);
   protected readonly bloqueo = signal<{ texto: string; delegacion: Delegacion } | null>(null);
 
+  /* ── Corregir una prioridad ya escrita ─────────────────────────────────── */
+
+  protected readonly corrigiendo = signal<{ fecha: string; id: string; texto: string } | null>(null);
+  protected readonly textoCorregido = signal('');
+  protected readonly errorCorreccion = signal('');
+
+  protected corregir(p: { id: string; texto: string }, fecha = this.hoy): void {
+    this.errorCorreccion.set('');
+    this.textoCorregido.set(p.texto);
+    this.corrigiendo.set({ fecha, id: p.id, texto: p.texto });
+  }
+
+  protected async guardarCorreccion(): Promise<void> {
+    const p = this.corrigiendo();
+    const texto = this.textoCorregido().trim();
+    if (!p || !texto) return;
+    if (texto === p.texto) { this.corrigiendo.set(null); return; }
+
+    // La misma regla que al crearla. Si no, alcanzaría con escribirla torcida
+    // a propósito y corregirla después para saltear la tabla de delegación.
+    const ev = evaluarPrioridad(texto);
+    if (!ev.permitida && ev.delegacion) {
+      this.errorCorreccion.set(
+        `Así escrita es de ${ev.delegacion.duenoNombre}: ${ev.delegacion.tarea}. `
+        + 'Corregila de otra forma, o cerrá esto y derivala.');
+      return;
+    }
+    await this.datos.renombrarPrioridad(p.fecha, p.id, texto, ev.clasificacion.categoria);
+    this.corrigiendo.set(null);
+    this.avisos.mostrar('Corregida.');
+  }
+
   protected async agregar(): Promise<void> {
     const texto = this.nueva().trim();
     if (!texto) return;

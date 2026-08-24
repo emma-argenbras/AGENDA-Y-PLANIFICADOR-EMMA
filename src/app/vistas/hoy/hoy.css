@@ -102,3 +102,16 @@ a { color: var(--acento); }
 }
 .vieja:last-child { border-bottom: 0; }
 .vieja .btn-fila .btn { flex: 1; }
+
+/* El texto de una prioridad es un botón: se toca y se corrige. */
+.texto-editable {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}

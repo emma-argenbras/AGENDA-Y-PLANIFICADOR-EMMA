@@ -138,14 +138,16 @@
         </svg>
       }
     </button>
-    <div class="crece">
+    <button class="crece texto-editable" type="button" (click)="corregir(p)"
+            [attr.aria-label]="'Corregir: ' + p.texto">
       <div [class.tachado]="p.hecha">{{ p.texto }}</div>
       <div class="mini">
         @if (p.categoria) { {{ nombreCategoria(p.categoria) }} }
         @if (p.objetivoId && nombreObjetivo(p.objetivoId)) { · → {{ nombreObjetivo(p.objetivoId) }} }
         @if (p.pendienteId) { · de la bandeja }
+        · tocá para corregir
       </div>
-    </div>
+    </button>
     <button class="btn chico fantasma" type="button" (click)="quitar(p)" aria-label="Quitar">✕</button>
   </div>
 }
@@ -240,10 +242,12 @@
     <ul class="limpia">
       @for (p of sinCerrar(); track p.fecha + p.id) {
         <li class="vieja">
-          <div class="crece">
+          <button class="crece texto-editable" type="button" (click)="corregir(p, p.fecha)">
             <div>{{ p.texto }}</div>
-            <div class="mini">{{ fechaCorta(p.fecha) }} · hace {{ diasAbierta(p.fecha) }} día(s)</div>
-          </div>
+            <div class="mini">
+              {{ fechaCorta(p.fecha) }} · hace {{ diasAbierta(p.fecha) }} día(s) · tocá para corregir
+            </div>
+          </button>
           <div class="btn-fila">
             <button class="btn chico" type="button" (click)="cerrarVieja(p)">Hecha</button>
             <button class="btn chico primario" type="button" (click)="traerAHoy(p)">Traer a hoy</button>
@@ -375,4 +379,21 @@
     </div>
   }
   <button pie class="btn" type="button" (click)="eligiendo.set(false)">Cerrar</button>
+</app-dialogo>
+
+<!-- ── Corregir el texto de una prioridad ───────────────────────────────── -->
+<app-dialogo [abierto]="!!corrigiendo()" titulo="Corregir la prioridad"
+             (cerrar)="corrigiendo.set(null)">
+  <label class="campo">
+    <span>Cómo debería decir</span>
+    <input type="text" [value]="textoCorregido()" enterkeyhint="done"
+           (input)="textoCorregido.set($any($event.target).value)"
+           (keydown.enter)="guardarCorreccion()">
+  </label>
+  <p class="mini">
+    Al guardar se vuelve a mirar de quién es la tarea, igual que al escribirla la primera vez.
+  </p>
+  @if (errorCorreccion()) { <p class="error">{{ errorCorreccion() }}</p> }
+  <button pie class="btn primario" type="button" (click)="guardarCorreccion()">Guardar</button>
+  <button pie class="btn" type="button" (click)="corrigiendo.set(null)">Cancelar</button>
 </app-dialogo>
