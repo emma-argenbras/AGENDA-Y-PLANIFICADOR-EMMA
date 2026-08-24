@@ -206,6 +206,33 @@ await paso('semana: se definen los 3 objetivos y no entra un cuarto', async () =
   }
 });
 
+await paso('semana: se puede corregir el texto de un objetivo', async () => {
+  const original = 'Cerrar exclusividad Curitiba';
+  const corregido = 'Cerrar exclusividad Curitiba S.A.';
+  const abrir = async () => {
+    await p.goto(URL + '#/semana');
+    await p.click('.objetivo .texto-editable');
+    await p.waitForSelector('dialog[open]:has-text("Corregir el objetivo")');
+  };
+
+  await abrir();
+  await p.fill('dialog[open] input[type=text]', corregido);
+  await p.click('dialog[open] .pie .btn.primario');
+  await sinDialogo();
+  await p.waitForSelector(`.objetivo:has-text("${corregido}")`);
+
+  // La corrección se ve también donde el objetivo se lee todos los días.
+  await p.goto(URL + '#/hoy');
+  await p.waitForSelector(`.objetivos:has-text("${corregido}")`);
+
+  // Y vuelve como estaba: los pasos que siguen lo buscan por su texto.
+  await abrir();
+  await p.fill('dialog[open] input[type=text]', original);
+  await p.click('dialog[open] .pie .btn.primario');
+  await sinDialogo();
+  await p.waitForSelector(`.objetivo:has-text("${original}")`);
+});
+
 await paso('bandeja: bloquea lo ajeno y acepta lo tuyo', async () => {
   await p.click('#tabs a[href="#/pendientes"]');
   await p.waitForSelector('text=En la bandeja');

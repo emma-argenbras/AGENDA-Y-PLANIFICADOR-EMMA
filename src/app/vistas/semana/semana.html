@@ -32,7 +32,8 @@
         }
       </button>
       <div class="crece">
-        <div [class.tachado]="o.hecho">{{ o.texto }}</div>
+        <button class="texto-editable" type="button" (click)="corregir(o)"
+                [class.tachado]="o.hecho" [attr.aria-label]="'Corregir: ' + o.texto">{{ o.texto }}</button>
         <div class="mini">
           {{ nombreUnidad(o.unidad) }}
           @if (o.pendientes) { · {{ o.pendientes }} pendiente(s) atados }
@@ -213,4 +214,18 @@
   </label>
   <button pie class="btn primario" type="button" (click)="cerrarSemana()">Cerrar</button>
   <button pie class="btn" type="button" (click)="cerrando.set(false)">Cancelar</button>
+</app-dialogo>
+
+<!-- ── Corregir el texto de un objetivo ─────────────────────────────────── -->
+<app-dialogo [abierto]="!!corrigiendo()" titulo="Corregir el objetivo"
+             (cerrar)="corrigiendo.set(null)">
+  <label class="campo">
+    <span>Cómo debería decir</span>
+    <input type="text" [value]="textoCorregido()" enterkeyhint="done"
+           (input)="textoCorregido.set($any($event.target).value)"
+           (keydown.enter)="guardarCorreccion()">
+  </label>
+  <p class="mini">Lo que ya está colgado de este objetivo sigue colgado.</p>
+  <button pie class="btn primario" type="button" (click)="guardarCorreccion()">Guardar</button>
+  <button pie class="btn" type="button" (click)="corrigiendo.set(null)">Cancelar</button>
 </app-dialogo>

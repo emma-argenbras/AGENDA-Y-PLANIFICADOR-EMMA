@@ -102,7 +102,8 @@
     @for (o of objetivos(); track o.id) {
       <div class="obj" [class.hecho]="o.hecho">
         <span class="bolita" [class.llena]="o.hecho"></span>
-        <span class="crece" [class.tachado]="o.hecho">{{ o.texto }}</span>
+        <button class="crece texto-editable" type="button" (click)="corregirObjetivo(o)"
+                [class.tachado]="o.hecho" [attr.aria-label]="'Corregir: ' + o.texto">{{ o.texto }}</button>
       </div>
     }
     @if (sinRumbo()) {
@@ -382,7 +383,8 @@
 </app-dialogo>
 
 <!-- ── Corregir el texto de una prioridad ───────────────────────────────── -->
-<app-dialogo [abierto]="!!corrigiendo()" titulo="Corregir la prioridad"
+<app-dialogo [abierto]="!!corrigiendo()"
+             [titulo]="corrigiendo()?.que === 'objetivo' ? 'Corregir el objetivo' : 'Corregir la prioridad'"
              (cerrar)="corrigiendo.set(null)">
   <label class="campo">
     <span>Cómo debería decir</span>
@@ -390,9 +392,16 @@
            (input)="textoCorregido.set($any($event.target).value)"
            (keydown.enter)="guardarCorreccion()">
   </label>
-  <p class="mini">
-    Al guardar se vuelve a mirar de quién es la tarea, igual que al escribirla la primera vez.
-  </p>
+  @if (corrigiendo()?.que === 'objetivo') {
+    <p class="mini">
+      Es el objetivo de esta semana: se corrige el texto y listo. Lo que ya está colgado de él
+      sigue colgado.
+    </p>
+  } @else {
+    <p class="mini">
+      Al guardar se vuelve a mirar de quién es la tarea, igual que al escribirla la primera vez.
+    </p>
+  }
   @if (errorCorreccion()) { <p class="error">{{ errorCorreccion() }}</p> }
   <button pie class="btn primario" type="button" (click)="guardarCorreccion()">Guardar</button>
   <button pie class="btn" type="button" (click)="corrigiendo.set(null)">Cancelar</button>

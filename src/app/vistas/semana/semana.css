@@ -21,3 +21,16 @@ td:nth-child(2), td:nth-child(3), th:nth-child(2), th:nth-child(3) { text-align:
   cursor: pointer;
 }
 .objetivo.logrado .marca { border-color: var(--bien); }
+
+/* El texto del objetivo es un botón: se toca y se corrige. */
+.texto-editable {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}

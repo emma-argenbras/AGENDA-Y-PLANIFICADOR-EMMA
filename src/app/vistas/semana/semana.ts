@@ -151,6 +151,25 @@ export class Semana {
     this.nuevoObjetivo.set('');
   }
 
+  /* ── Corregir el texto de un objetivo ──────────────────────────────────── */
+
+  protected readonly corrigiendo = signal<{ id: string; texto: string } | null>(null);
+  protected readonly textoCorregido = signal('');
+
+  protected corregir(o: { id: string; texto: string }): void {
+    this.textoCorregido.set(o.texto);
+    this.corrigiendo.set(o);
+  }
+
+  protected async guardarCorreccion(): Promise<void> {
+    const o = this.corrigiendo();
+    const texto = this.textoCorregido().trim();
+    if (!o || !texto) return;
+    if (texto !== o.texto) await this.datos.renombrarObjetivo(this.lunes(), o.id, texto);
+    this.corrigiendo.set(null);
+    this.avisos.mostrar('Objetivo corregido.');
+  }
+
   protected async alternarObjetivo(id: string): Promise<void> {
     const plan = this.plan();
     if (!plan) return;

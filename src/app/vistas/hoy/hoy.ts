@@ -246,14 +246,24 @@ export class Hoy {
 
   /* ── Corregir una prioridad ya escrita ─────────────────────────────────── */
 
-  protected readonly corrigiendo = signal<{ fecha: string; id: string; texto: string } | null>(null);
+  protected readonly corrigiendo = signal<
+    { que: 'prioridad' | 'objetivo'; fecha: string; id: string; texto: string } | null>(null);
   protected readonly textoCorregido = signal('');
   protected readonly errorCorreccion = signal('');
 
   protected corregir(p: { id: string; texto: string }, fecha = this.hoy): void {
     this.errorCorreccion.set('');
     this.textoCorregido.set(p.texto);
-    this.corrigiendo.set({ fecha, id: p.id, texto: p.texto });
+    this.corrigiendo.set({ que: 'prioridad', fecha, id: p.id, texto: p.texto });
+  }
+
+  /** Los objetivos de la semana se corrigen desde acá, que es donde se leen. */
+  protected corregirObjetivo(o: { id: string; texto: string }): void {
+    this.errorCorreccion.set('');
+    this.textoCorregido.set(o.texto);
+    this.corrigiendo.set({
+      que: 'objetivo', fecha: inicioSemana(this.hoy), id: o.id, texto: o.texto,
+    });
   }
 
   protected async guardarCorreccion(): Promise<void> {
@@ -261,6 +271,13 @@ export class Hoy {
     const texto = this.textoCorregido().trim();
     if (!p || !texto) return;
     if (texto === p.texto) { this.corrigiendo.set(null); return; }
+
+    if (p.que === 'objetivo') {
+      await this.datos.renombrarObjetivo(p.fecha, p.id, texto);
+      this.corrigiendo.set(null);
+      this.avisos.mostrar('Objetivo corregido.');
+      return;
+    }
 
     // La misma regla que al crearla. Si no, alcanzaría con escribirla torcida
     // a propósito y corregirla después para saltear la tabla de delegación.

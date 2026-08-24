@@ -219,6 +219,22 @@ export class Datos {
   }
 
   /**
+   * Corrige el texto de un objetivo de la semana.
+   *
+   * Un objetivo es un resultado, no una tarea: no pasa por la tabla de
+   * delegación —«que Higiene no caiga» no tiene un dueño distinto de vos— así
+   * que corregirlo es corregir el texto y nada más.
+   */
+  async renombrarObjetivo(lunes: string, id: string, texto: string): Promise<void> {
+    const plan = await this.plan(lunes);
+    if (!plan) return;
+    await this.guardarPlan({
+      ...plan,
+      objetivos: plan.objetivos.map(o => (o.id === id ? { ...o, texto } : o)),
+    });
+  }
+
+  /**
    * Corrige el texto de una prioridad, de hoy o de cualquier día.
    *
    * La categoría se recalcula con el texto nuevo: si no, una prioridad
