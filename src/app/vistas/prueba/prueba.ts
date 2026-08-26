@@ -3,8 +3,8 @@
  * checklist de señales en cada revisión de viernes.
  */
 
-import { Component, computed, inject, resource, signal, ChangeDetectionStrategy } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, computed, effect, inject, resource, signal, ChangeDetectionStrategy } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Datos } from '../../data/datos';
 import { Avisos } from '../../ui/avisos';
 import { Dialogo } from '../../ui/dialogo';
@@ -24,6 +24,29 @@ export class Prueba {
   private readonly datos = inject(Datos);
   private readonly avisos = inject(Avisos);
   private readonly cfg = inject(Configuracion);
+  private readonly ruta = inject(ActivatedRoute);
+
+  /** La apertura automática es una sola vez, no una condición permanente. */
+  #yaAbrio = false;
+
+  constructor() {
+    // Un cartel que dice «tenés una revisión sin registrar» y te deja en la
+    // pantalla para que la busques resolvió la mitad del problema. Si sabe
+    // cuál es, la abre.
+    //
+    // Corre cuando la prueba terminó de cargar, y una sola vez: mirar si el
+    // diálogo está abierto para decidir lo volvía a abrir apenas se cerraba,
+    // porque cerrarlo es justamente lo que hacía cumplir la condición.
+    effect(() => {
+      if (this.#yaAbrio) return;
+      const fecha = this.ruta.snapshot.queryParamMap.get('registrar');
+      if (!fecha) { this.#yaAbrio = true; return; }
+      const prueba = this.P();
+      if (!prueba) return;
+      this.#yaAbrio = true;
+      if (prueba.revisiones.includes(fecha)) this.abrir(fecha);
+    });
+  }
 
   protected readonly pruebas = computed(() => this.cfg.reglas().pruebas);
   protected readonly hayPruebas = computed(() => this.pruebas().length > 0);

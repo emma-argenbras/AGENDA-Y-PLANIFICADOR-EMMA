@@ -49,13 +49,16 @@ export class Pendientes {
 
   private readonly estado = resource({
     params: () => ({ v: this.datos.cambios() }),
-    loader: async () => ({
-      pendientes: await this.datos.pendientes(),
-      plan: await this.datos.plan(inicioSemana(this.hoy)),
-      prioridades: await this.datos.prioridades(this.hoy),
-      eventos: await this.datos.eventosEntre(this.hoy, sumarDias(this.hoy, 7)),
-      inicio: await this.datos.desdeCuando(),
-    }),
+    loader: async () => {
+      const [pendientes, plan, prioridades, eventos, inicio] = await Promise.all([
+        this.datos.pendientes(),
+        this.datos.plan(inicioSemana(this.hoy)),
+        this.datos.prioridades(this.hoy),
+        this.datos.eventosEntre(this.hoy, sumarDias(this.hoy, 7)),
+        this.datos.desdeCuando(),
+      ]);
+      return { pendientes, plan, prioridades, eventos, inicio };
+    },
   });
 
   protected readonly todos = computed<Pendiente[]>(() => this.estado.value()?.pendientes ?? []);

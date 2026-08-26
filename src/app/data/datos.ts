@@ -22,6 +22,13 @@ import type { RegistrosPrueba } from '../core/prueba-luciana';
 import type { Pendiente, PlanSemana } from '../core/pendientes';
 import { bloqueDe, primerHueco, sinRepetidos, type Evento } from '../core/agenda';
 
+/**
+ * Cuánto vale una lectura ya hecha. Quince segundos alcanzan para que ir y
+ * volver entre pestañas sea instantáneo, y son pocos para que algo cargado en
+ * otro aparato tarde en aparecer más que antes.
+ */
+const FRESCO_MS = 15_000;
+
 @Injectable({ providedIn: 'root' })
 export class Datos {
   private readonly local = inject(RepoLocal);
@@ -113,7 +120,52 @@ export class Datos {
     return this.#nube() ?? this.local;
   }
 
-  #tocar(): void { this.cambios.update(v => v + 1); }
+  /* ── Caché de lectura ──────────────────────────────────────────────────── */
+
+  /**
+   * Cambiar de pestaña destruye la pantalla anterior y arma la siguiente de
+   * cero, así que cada viaje volvía a pedir todo: la pantalla Hoy sola son
+   * diez consultas, y en fila india contra la nube eso se siente como una
+   * recarga cada vez.
+   *
+   * Quince segundos alcanzan para que ir y volver entre pestañas sea
+   * instantáneo, y son pocos para que algo cargado en otro aparato aparezca
+   * igual de rápido que antes. Cualquier escritura tira la caché entera: es
+   * más barato volver a pedir que razonar qué quedó viejo.
+   */
+  #cache = new Map<string, { valor: unknown; hasta: number }>();
+
+  #cacheado<T>(clave: string): { hay: boolean; valor: T } {
+    const e = this.#cache.get(clave);
+    if (!e || e.hasta < Date.now()) return { hay: false, valor: null as T };
+    return { hay: true, valor: e.valor as T };
+  }
+
+  #guardarEnCache(clave: string, valor: unknown): void {
+    this.#cache.set(clave, { valor, hasta: Date.now() + FRESCO_MS });
+  }
+
+  async #leer<T>(clave: string): Promise<T | null> {
+    const c = this.#cacheado<T | null>(clave);
+    if (c.hay) return c.valor;
+    const valor = await (await this.#puerta()).leer<T>(clave);
+    this.#guardarEnCache(clave, valor);
+    return valor;
+  }
+
+  async #rango<T>(desde: string, hasta: string): Promise<Entrada<T>[]> {
+    const clave = `\u0000rango\u0000${desde}\u0000${hasta}`;
+    const c = this.#cacheado<Entrada<T>[]>(clave);
+    if (c.hay) return c.valor;
+    const filas = await (await this.#puerta()).rango<T>(desde, hasta);
+    this.#guardarEnCache(clave, filas);
+    return filas;
+  }
+
+  #tocar(): void {
+    this.#cache.clear();
+    this.cambios.update(v => v + 1);
+  }
 
   async escribir<T>(clave: string, valor: T): Promise<void> {
     const repo = await this.#puerta();
@@ -136,7 +188,7 @@ export class Datos {
    * que ir a borrarlo a mano.
    */
   async eventos(fecha: string): Promise<Evento[]> {
-    return sinRepetidos((await (await this.#puerta()).leer<Evento[]>(K.agenda(fecha))) ?? []);
+    return sinRepetidos((await this.#leer<Evento[]>(K.agenda(fecha))) ?? []);
   }
 
   /**
@@ -154,7 +206,7 @@ export class Datos {
 
   /** Eventos de un rango, con la fecha ya puesta en cada uno. */
   async eventosEntre(desde: string, hasta: string): Promise<Evento[]> {
-    const filas = await (await this.#puerta()).rango<Evento[]>(K.agenda(desde), K.agenda(hasta));
+    const filas = await this.#rango<Evento[]>(K.agenda(desde), K.agenda(hasta));
     return filas.flatMap(f =>
       sinRepetidos(f.valor ?? []).map(e => ({ ...e, fecha: f.clave.slice('agenda:'.length) })));
   }
@@ -189,13 +241,13 @@ export class Datos {
 
   /* ── Cierre de jornada ─────────────────────────────────────────────────── */
 
-  async checkin(fecha: string) { return (await this.#puerta()).leer<Checkin>(K.checkin(fecha)); }
+  async checkin(fecha: string) { return await this.#leer<Checkin>(K.checkin(fecha)); }
   guardarCheckin(fecha: string, ck: Checkin) { return this.escribir(K.checkin(fecha), ck); }
   borrarCheckin(fecha: string) { return this.borrar(K.checkin(fecha)); }
 
   /** Check-ins entre dos fechas, sin huecos que rompan los cálculos. */
   async checkinsEntre(desde: string, hasta: string): Promise<Checkin[]> {
-    const filas: Entrada<Checkin>[] = await (await this.#puerta()).rango<Checkin>(K.checkin(desde), K.checkin(hasta));
+    const filas: Entrada<Checkin>[] = await this.#rango<Checkin>(K.checkin(desde), K.checkin(hasta));
     return filas
       .map(f => ({ ...f.valor, fecha: f.clave.slice('checkin:'.length) }))
       .filter(c => Array.isArray(c.segmentos))
@@ -212,7 +264,7 @@ export class Datos {
    * que ya nadie mira. Eso se siente igual que perderla.
    */
   async prioridadesEntre(desde: string, hasta: string): Promise<(Prioridad & { fecha: string })[]> {
-    const filas = await (await this.#puerta()).rango<Prioridad[]>(
+    const filas = await this.#rango<Prioridad[]>(
       K.prioridades(desde), K.prioridades(hasta));
     return filas.flatMap(f => (f.valor ?? []).map(p =>
       ({ ...p, fecha: f.clave.slice('prio:'.length) })));
@@ -272,18 +324,18 @@ export class Datos {
   }
 
   async prioridades(fecha: string): Promise<Prioridad[]> {
-    return (await (await this.#puerta()).leer<Prioridad[]>(K.prioridades(fecha))) ?? [];
+    return (await this.#leer<Prioridad[]>(K.prioridades(fecha))) ?? [];
   }
   guardarPrioridades(fecha: string, p: Prioridad[]) { return this.escribir(K.prioridades(fecha), p); }
 
   /* ── Reuniones y actas ─────────────────────────────────────────────────── */
 
-  async reuniones(): Promise<Reunion[]> { return (await (await this.#puerta()).leer<Reunion[]>(K.reuniones)) ?? []; }
+  async reuniones(): Promise<Reunion[]> { return (await this.#leer<Reunion[]>(K.reuniones)) ?? []; }
   guardarReuniones(r: Reunion[]) { return this.escribir(K.reuniones, r); }
 
   /* ── Derivaciones ──────────────────────────────────────────────────────── */
 
-  async derivaciones(): Promise<Derivacion[]> { return (await (await this.#puerta()).leer<Derivacion[]>(K.derivaciones)) ?? []; }
+  async derivaciones(): Promise<Derivacion[]> { return (await this.#leer<Derivacion[]>(K.derivaciones)) ?? []; }
   guardarDerivaciones(d: Derivacion[]) { return this.escribir(K.derivaciones, d); }
 
   async agregarDerivaciones(nuevas: Derivacion[]): Promise<void> {
@@ -294,7 +346,7 @@ export class Datos {
   /* ── Bandeja de pendientes ─────────────────────────────────────────────── */
 
   async pendientes(): Promise<Pendiente[]> {
-    return (await (await this.#puerta()).leer<Pendiente[]>(K.pendientes)) ?? [];
+    return (await this.#leer<Pendiente[]>(K.pendientes)) ?? [];
   }
   guardarPendientes(p: Pendiente[]) { return this.escribir(K.pendientes, p); }
 
@@ -309,13 +361,13 @@ export class Datos {
 
   /* ── Plan de la semana ─────────────────────────────────────────────────── */
 
-  async plan(lunes: string) { return (await this.#puerta()).leer<PlanSemana>(K.plan(lunes)); }
+  async plan(lunes: string) { return await this.#leer<PlanSemana>(K.plan(lunes)); }
   guardarPlan(plan: PlanSemana) { return this.escribir(K.plan(plan.lunes), plan); }
 
   /* ── Prueba de Luciana ─────────────────────────────────────────────────── */
 
   async prueba(id = 'luciana_2026_08'): Promise<RegistrosPrueba> {
-    return (await (await this.#puerta()).leer<RegistrosPrueba>(K.prueba(id))) ?? {};
+    return (await this.#leer<RegistrosPrueba>(K.prueba(id))) ?? {};
   }
   guardarPrueba(p: RegistrosPrueba, id = 'luciana_2026_08') { return this.escribir(K.prueba(id), p); }
 
@@ -329,13 +381,13 @@ export class Datos {
   /* ── Indicadores ───────────────────────────────────────────────────────── */
 
   async indicadores(): Promise<FilaIndicadores[]> {
-    return (await (await this.#puerta()).leer<FilaIndicadores[]>(K.indicadores)) ?? [];
+    return (await this.#leer<FilaIndicadores[]>(K.indicadores)) ?? [];
   }
   guardarIndicadores(i: FilaIndicadores[]) { return this.escribir(K.indicadores, i); }
 
   /* ── Documentos de Drive ───────────────────────────────────────────────── */
 
-  async docsIndice(): Promise<DocIndexado[]> { return (await (await this.#puerta()).leer<DocIndexado[]>(K.docsIndice)) ?? []; }
+  async docsIndice(): Promise<DocIndexado[]> { return (await this.#leer<DocIndexado[]>(K.docsIndice)) ?? []; }
   guardarDocsIndice(d: DocIndexado[]) { return this.escribir(K.docsIndice, d); }
   /**
    * El permiso de Google (Drive y Calendar) NUNCA sale de este dispositivo.
@@ -354,13 +406,13 @@ export class Datos {
 
   /* ── Configuración (las reglas editables) ──────────────────────────────── */
 
-  async config<T>(): Promise<T | null> { return (await this.#puerta()).leer<T>(K.config); }
+  async config<T>(): Promise<T | null> { return await this.#leer<T>(K.config); }
   guardarConfig<T>(c: T) { return this.escribir(K.config, c); }
 
   /* ── Ajustes ───────────────────────────────────────────────────────────── */
 
   async ajustes(): Promise<Ajustes> {
-    const guardado = (await (await this.#puerta()).leer<Partial<Ajustes>>(K.ajustes)) ?? {};
+    const guardado = (await this.#leer<Partial<Ajustes>>(K.ajustes)) ?? {};
     const a = { ...AJUSTES_POR_DEFECTO, ...guardado };
     // Un campo vacío guardado en versiones anteriores no tapa el valor de fábrica.
     if (!a.driveClientId) a.driveClientId = AJUSTES_POR_DEFECTO.driveClientId;

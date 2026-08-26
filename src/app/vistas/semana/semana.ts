@@ -50,15 +50,14 @@ export class Semana {
     params: () => ({ lunes: this.lunes(), v: this.datos.cambios() }),
     loader: async ({ params }) => {
       const desdeTendencia = sumarDias(params.lunes, -7 * (SEMANAS_TENDENCIA - 1));
-      const todo = await this.datos.checkinsEntre(desdeTendencia, sumarDias(params.lunes, 6));
+      const [todo, plan, planAnterior, pendientes] = await Promise.all([
+        this.datos.checkinsEntre(desdeTendencia, sumarDias(params.lunes, 6)),
+        this.datos.plan(params.lunes),
+        this.datos.plan(sumarDias(params.lunes, -7)),
+        this.datos.pendientes(),
+      ]);
       const dias = diasSemana(params.lunes);
-      return {
-        todo,
-        semana: todo.filter(c => dias.includes(c.fecha)),
-        plan: await this.datos.plan(params.lunes),
-        planAnterior: await this.datos.plan(sumarDias(params.lunes, -7)),
-        pendientes: await this.datos.pendientes(),
-      };
+      return { todo, semana: todo.filter(c => dias.includes(c.fecha)), plan, planAnterior, pendientes };
     },
   });
 

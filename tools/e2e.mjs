@@ -19,6 +19,8 @@ const URL = process.env.APP_URL || 'http://127.0.0.1:8099/';
 // PDF mínimo con una línea de texto real adentro, para el paso de Documentos.
 const PDF_B64 = '255044462d312e340a312030206f626a0a3c3c202f54797065202f436174616c6f67202f5061676573203220302052203e3e0a656e646f626a0a322030206f626a0a3c3c202f54797065202f5061676573202f4b696473205b33203020525d202f436f756e742031203e3e0a656e646f626a0a332030206f626a0a3c3c202f54797065202f50616765202f506172656e74203220302052202f4d65646961426f78205b30203020363132203739325d202f5265736f7572636573203c3c202f466f6e74203c3c202f4631203520302052203e3e203e3e202f436f6e74656e7473203420302052203e3e0a656e646f626a0a342030206f626a0a3c3c202f4c656e677468203738203e3e0a73747265616d0a4254202f46312031342054662037322037303020546420284d617267656e206d696e696d6f206465206369656c6f727261736f73205056433a20333820706f72206369656e746f2920546a2045540a656e6473747265616d0a656e646f626a0a352030206f626a0a3c3c202f54797065202f466f6e74202f53756274797065202f5479706531202f42617365466f6e74202f48656c766574696361203e3e0a656e646f626a0a787265660a3020360a303030303030303030302036353533352066200a30303030303030303039203030303030206e200a30303030303030303538203030303030206e200a30303030303030313135203030303030206e200a30303030303030323431203030303030206e200a30303030303030333639203030303030206e200a747261696c65720a3c3c202f53697a652036202f526f6f74203120302052203e3e0a7374617274787265660a3433390a2525454f460a';
 const errores = [];
+const HOY = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
+  .toISOString().slice(0, 10);
 
 const b = await chromium.launch();
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, locale: 'es-AR' });
@@ -633,6 +635,20 @@ await paso('configuración: se puede dejar todo como venía', async () => {
   await sinDialogo();
   const editadas = await p.locator('.marca:not(.fabrica)').count();
   if (editadas !== 0) throw new Error('quedaron secciones editadas: ' + editadas);
+});
+
+await paso('los carteles de arriba llevan a resolver, no solo a la pantalla', async () => {
+  // «Agendar» abre el alta del día, no la semana para que uno la busque.
+  await p.goto(URL + '#/agenda?nuevo=' + HOY);
+  await p.waitForSelector('dialog[open]:has-text("Nuevo evento")');
+  await p.click('dialog[open] button:has-text("Cancelar")');
+  await sinDialogo();
+
+  // Y la revisión de la prueba se abre sola cuando el cartel dice cuál es.
+  await p.goto(URL + '#/prueba?registrar=2026-08-21');
+  await p.waitForSelector('dialog[open] .senal', { timeout: 15000 });
+  await p.click('dialog[open] button:has-text("Cancelar")');
+  await sinDialogo();
 });
 
 await paso('el instructivo abre desde el menú y los desplegables funcionan', async () => {

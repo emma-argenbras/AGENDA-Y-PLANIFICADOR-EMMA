@@ -60,20 +60,32 @@ export class Hoy {
 
   private readonly datosDelDia = resource({
     params: () => ({ v: this.datos.cambios() }),
-    loader: async () => ({
-      prioridades: await this.datos.prioridades(this.hoy),
-      checkin: await this.datos.checkin(this.hoy),
-      racha: await this.datos.rachaSinRegistro(sumarDias(this.hoy, -1)),
-      ultimos: await this.#ultimosDias(),
-      plan: await this.datos.plan(inicioSemana(this.hoy)),
-      eventos: await this.datos.eventos(this.hoy),
-      cierres: await this.datos.cierresDePruebas(this.cfg.reglas().pruebas.map(p => p.id)),
-      inicio: await this.datos.desdeCuando(),
-      sinCerrar: await this.datos.prioridadesEntre(sumarDias(this.hoy, -14), sumarDias(this.hoy, -1)),
-      planProximo: await this.datos.plan(sumarDias(inicioSemana(this.hoy), 7)),
-      pendientes: await this.datos.pendientes(),
-      reuniones: await this.datos.reuniones(),
-    }),
+    // En paralelo, no en fila india: no dependen entre sí, y encadenadas la
+    // pantalla tardaba la suma de todas en vez de lo que tarda la más lenta.
+    loader: async () => {
+      const lunes = inicioSemana(this.hoy);
+      const [
+        prioridades, checkin, racha, ultimos, plan, eventos,
+        cierres, inicio, sinCerrar, planProximo, pendientes, reuniones,
+      ] = await Promise.all([
+        this.datos.prioridades(this.hoy),
+        this.datos.checkin(this.hoy),
+        this.datos.rachaSinRegistro(sumarDias(this.hoy, -1)),
+        this.#ultimosDias(),
+        this.datos.plan(lunes),
+        this.datos.eventos(this.hoy),
+        this.datos.cierresDePruebas(this.cfg.reglas().pruebas.map(p => p.id)),
+        this.datos.desdeCuando(),
+        this.datos.prioridadesEntre(sumarDias(this.hoy, -14), sumarDias(this.hoy, -1)),
+        this.datos.plan(sumarDias(lunes, 7)),
+        this.datos.pendientes(),
+        this.datos.reuniones(),
+      ]);
+      return {
+        prioridades, checkin, racha, ultimos, plan, eventos,
+        cierres, inicio, sinCerrar, planProximo, pendientes, reuniones,
+      };
+    },
   });
 
   protected readonly cargando = computed(() => this.datosDelDia.isLoading());
@@ -158,11 +170,29 @@ export class Hoy {
   });
 
   /** Viernes o domingo: la app te lleva al ritual semanal en vez de esperarte. */
-  protected readonly ritual = computed(() => estadoSemanal(
-    this.hoy,
-    this.datosDelDia.value()?.plan ?? null,
-    this.datosDelDia.value()?.planProximo ?? null,
-  ));
+  /**
+   * Mientras los datos no llegaron no hay plan que mirar, y un plan ausente se
+   * parece demasiado a uno que no existe: el cartel «la semana arrancó sin
+   * plan» aparecía y se iba solo un segundo después, justo cuando la app se
+   * enteraba de que los tres objetivos ya estaban.
+   */
+  protected readonly ritual = computed(() => {
+    const d = this.datosDelDia.value();
+    if (!d) return { momento: 'nada' as const, lunes: this.hoy, titulo: '', motivo: '' };
+    return estadoSemanal(this.hoy, d.plan ?? null, d.planProximo ?? null);
+  });
+
+  /** El primer día hábil sin cierre, que es el que conviene cargar primero. */
+  protected readonly diaSinCierre = computed(() =>
+    this.ultimos().find(d => !d.hay && !d.finde)?.fecha ?? sumarDias(this.hoy, -1));
+
+  /** La revisión vencida más vieja: es la que hay que registrar primero. */
+  protected readonly revisionVencida = computed(() => {
+    const r = this.registrosActiva.value();
+    if (!r) return null;
+    return estadoPrueba(this.hoy, r.registros, r.activa, r.inicio)
+      .revisiones.find(x => x.estado === 'vencida')?.fecha ?? null;
+  });
 
   /* ── El plan de la semana, atado al día ────────────────────────────────── */
 

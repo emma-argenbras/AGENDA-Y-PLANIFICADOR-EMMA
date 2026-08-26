@@ -3,14 +3,20 @@
 @if (racha() >= 2) {
   <div class="tarjeta alerta">
     <h2>{{ racha() }} días hábiles sin cierre de jornada</h2>
-    <p class="chico" style="margin:0">
+    <p class="chico" style="margin:0 0 10px">
       No es un recordatorio genérico: van {{ racha() }} días seguidos sin registrar nada.
       El problema que esta app tiene que resolver es exactamente este.
     </p>
+    <button class="btn primario ancho" type="button" (click)="diaPasado.set(diaSinCierre())">
+      Cargar el del {{ fechaCorta(diaSinCierre()) }}
+    </button>
   </div>
 } @else if (racha() === 1) {
   <div class="tarjeta">
-    <p class="chico" style="margin:0">Ayer no hubo cierre. Podés cargarlo desde «Últimos días».</p>
+    <div class="fila sep">
+      <span class="chico crece">Ayer no hubo cierre.</span>
+      <button class="btn chico" type="button" (click)="diaPasado.set(diaSinCierre())">Cargarlo</button>
+    </div>
   </div>
 }
 
@@ -31,7 +37,8 @@
         <span class="fuerte">{{ pruebaVencida() }} revisión(es) de la prueba sin registrar</span>
         <div class="mini">Si las revisiones no se hacen, la prueba se cancela.</div>
       </div>
-      <a class="btn chico primario" routerLink="/prueba">Ir</a>
+      <a class="btn chico primario" routerLink="/prueba"
+         [queryParams]="{ registrar: revisionVencida() }">Registrar</a>
     </div>
   </div>
 }
@@ -43,7 +50,8 @@
         <h2 style="margin:0">Hoy toca revisión de {{ r.persona.split(' ')[0] }}</h2>
         <p class="mini" style="margin:2px 0 0">15 minutos. Si las revisiones no se hacen, la prueba se cancela.</p>
       </div>
-      <a class="btn primario chico" routerLink="/prueba">Registrar</a>
+      <a class="btn primario chico" routerLink="/prueba"
+         [queryParams]="{ registrar: hoy }">Registrar</a>
     </div>
   </div>
 }
@@ -71,7 +79,7 @@
   <div class="tarjeta">
     <div class="fila sep">
       <span class="chico crece">Sin nada agendado hoy.</span>
-      <a class="btn chico" routerLink="/agenda">Agendar</a>
+      <a class="btn chico" routerLink="/agenda" [queryParams]="{ nuevo: hoy }">Agendar</a>
     </div>
   </div>
 }

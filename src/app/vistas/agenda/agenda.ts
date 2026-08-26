@@ -6,7 +6,7 @@
  */
 
 import { Component, computed, effect, inject, resource, signal, ChangeDetectionStrategy } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Datos } from '../../data/datos';
 import { Calendario } from '../../data/calendario';
 import { Drive } from '../../data/drive';
@@ -48,31 +48,45 @@ export class Agenda {
   protected readonly lunes = signal(inicioSemana(this.hoy));
   protected readonly diaAbierto = signal<string>(this.hoy);
 
+  private readonly ruta = inject(ActivatedRoute);
+
   constructor() {
     // Lo de Google entra solo al abrir la pantalla y al cambiar de semana.
     effect(() => {
       const lunes = this.lunes();
       void this.calendario.importarSiCorresponde(lunes, sumarDias(lunes, 6));
     });
+
+    // «Agendar» desde Hoy abre el alta del día, no la semana para que la
+    // busques: el cartel decía qué falta, así que puede terminar el trabajo.
+    const nuevo = this.ruta.snapshot.queryParamMap.get('nuevo');
+    if (nuevo) queueMicrotask(() => this.nuevo(nuevo));
   }
   protected readonly esSemanaActual = computed(() => this.lunes() === inicioSemana(this.hoy));
   protected readonly fechas = computed(() => diasSemana(this.lunes()));
 
   private readonly datosSemana = resource({
     params: () => ({ lunes: this.lunes(), v: this.datos.cambios() }),
-    loader: async ({ params }) => ({
-      eventos: await this.datos.eventosEntre(params.lunes, sumarDias(params.lunes, 6)),
-      ajustes: await this.datos.ajustes(),
-      prioridades: await this.datos.prioridades(this.hoy),
-      pendientes: (await this.datos.pendientes()).filter(x => x.estado === 'abierto').slice(0, 6),
-      cierres: await this.datos.cierresDePruebas(this.cfg.reglas().pruebas.map(p => p.id)),
+    loader: async ({ params }) => {
+      const [eventos, ajustes, prioridades, todosPendientes, cierres, permiso, calendarOk] =
+        await Promise.all([
+          this.datos.eventosEntre(params.lunes, sumarDias(params.lunes, 6)),
+          this.datos.ajustes(),
+          this.datos.prioridades(this.hoy),
+          this.datos.pendientes(),
+          this.datos.cierresDePruebas(this.cfg.reglas().pruebas.map(p => p.id)),
+          this.drive.estadoPermiso(),
+          this.drive.tieneCalendario(),
+        ]);
+      return {
+        eventos, ajustes, prioridades, cierres, permiso, calendarOk,
+        pendientes: todosPendientes.filter(x => x.estado === 'abierto').slice(0, 6),
       // Entrar con la cuenta (la nube) y dar permiso a Drive/Calendar son dos
       // cosas distintas, y la pantalla las confundía en una sola: decía
       // «todavía nunca entró» tanto si faltaba el permiso como si no había
       // eventos.
-      permiso: await this.drive.estadoPermiso(),
-      calendarOk: await this.drive.tieneCalendario(),
-    }),
+      };
+    },
   });
 
   protected readonly permiso = computed(() => this.datosSemana.value()?.permiso ?? 'nunca');
