@@ -179,7 +179,7 @@ export const CATEGORIAS: Categoria[] = [
 
   { id: 'marketing', n: 6, nombre: 'Marketing', color: '#008300', colorOscuro: '#008300',
     definicion: 'Campañas, redes, ML, métricas, ecommerce, contenido.',
-    pistas: ['campana', 'redes', 'instagram', 'facebook', 'contenido', 'reel', 'posteo', 'postear', 'publicidad', 'ads', 'metrica', 'ecommerce', 'tienda online', 'mercadolibre', 'mercado libre', 'catalogo'] },
+    pistas: ['campana', 'redes', 'instagram', 'facebook', 'contenido', 'reel', 'posteo', 'postear', 'publicidad', 'ads', 'metrica', 'ecommerce', 'tienda online', 'mercadolibre', 'mercado libre', 'catalogo', 'video', 'foto', 'folleto', 'flyer', 'placa', 'disen*', 'newsletter', 'pagina web', 'sitio web', 'marca'] },
 
   { id: 'operativa', n: 7, nombre: 'Ejecución operativa', color: '#4a3aa7', colorOscuro: '#9085e9', operativa: true,
     definicion: 'Cargar pedidos, presupuestos, CRM, despachos, NF, listas de precios, bancos, comprobantes.',

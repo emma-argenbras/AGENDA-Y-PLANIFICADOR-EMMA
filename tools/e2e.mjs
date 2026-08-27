@@ -344,6 +344,34 @@ await paso('semana: los gráficos dibujan', async () => {
   if (!ancho) throw new Error('la columna no tiene alto');
 });
 
+await paso('semana: lo que no cayó en ninguna categoría se ve y se rescata', async () => {
+  // El cierre de hoy ya está cargado, así que se usa un día anterior de la
+  // misma semana, desde «Últimos días».
+  await p.goto(URL + '#/hoy');
+  await p.locator('button:has-text("Cargar")').first().click();
+  await p.waitForSelector('dialog[open] textarea');
+  await p.fill('dialog[open] textarea', 'Asdfgh qwerty zxcvbn');
+  await p.click('dialog[open] .pie .btn.primario');
+  await p.waitForSelector('dialog[open] .segmento');
+  await p.click('dialog[open] .pie .btn.primario');
+  await sinDialogo();
+
+  await p.goto(URL + '#/semana');
+  await p.waitForSelector('text=sin clasificar');
+  // Aparece en el gráfico, no solo en un cartel: antes se contaba y no se veía.
+  const grafico = await p.textContent('app-barras-categoria');
+  if (!grafico.includes('Sin clasificar')) throw new Error('el gráfico sigue escondiéndolas');
+
+  await p.click('button:has-text("y clasificarlas")');
+  await p.waitForSelector('dialog[open] .suelto');
+  await p.locator('dialog[open] .suelto').first().locator('.chip:has-text("Marketing")').click();
+  await p.waitForFunction(
+    () => !document.body.textContent.includes('Sin clasificar'), null, { timeout: 10000 });
+  await p.click('dialog[open] .pie .btn');
+  await sinDialogo();
+});
+
+
 await paso('semana: la tabla de números existe (accesibilidad)', async () => {
   await p.click('button:has-text("Ver números")');
   await p.waitForSelector('table tbody tr');

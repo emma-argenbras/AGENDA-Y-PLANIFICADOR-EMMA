@@ -76,6 +76,29 @@ function matchPista(norm: string, pista: string): number {
   return pistaToRegex(pista).test(norm) ? pista.length : 0;
 }
 
+/**
+ * El nombre de una categoría es una pista de sí misma.
+ *
+ * Parece obvio y no lo estaba: «trabajé en marketing» no caía en Marketing,
+ * porque la palabra «marketing» no figuraba entre sus pistas. Las horas se
+ * iban a «sin clasificar», que es el único lugar del que no vuelven.
+ *
+ * Sale del nombre vigente, así que renombrar una categoría desde Configuración
+ * la deja buscable por su nombre nuevo sin tocar nada más.
+ */
+const _nombreCache = new Map<string, string[]>();
+
+function pistasConNombre(c: { nombre: string; pistas: string[] }): string[] {
+  let delNombre = _nombreCache.get(c.nombre);
+  if (!delNombre) {
+    delNombre = normalizar(c.nombre)
+      .split(/[^a-z0-9]+/)
+      .filter(w => w.length >= 4 && w !== 'admin');
+    _nombreCache.set(c.nombre, delNombre);
+  }
+  return delNombre.length ? [...c.pistas, ...delNombre] : c.pistas;
+}
+
 function mejorMatch<T extends ConPistas>(norm: string, items: readonly T[]): Match<T> | null {
   let best: Match<T> | null = null;
   for (const item of items) {
@@ -149,7 +172,7 @@ export function clasificarFragmento(texto: string): Segmento {
   const norm = normalizar(texto);
   const del = mejorMatch(norm, v.delegacion);
   const propia = mejorMatch(norm, v.decisiones);
-  const cat = mejorMatch(norm, v.categorias);
+  const cat = mejorMatch(norm, v.categorias.map(c => ({ ...c, pistas: pistasConNombre(c) })));
 
   const res: Segmento = {
     texto: (texto || '').trim(),

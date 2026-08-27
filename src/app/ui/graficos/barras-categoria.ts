@@ -64,17 +64,37 @@ export class BarrasCategoria {
   protected readonly filas = computed(() => {
     const t = this.total();
     const categorias = this.cfg.reglas().categorias;
-    const max = Math.max(...categorias.map(c => this.porCategoria()[c.id] ?? 0), 0.5);
-    return categorias.map(c => {
-      const horas = Math.round((this.porCategoria()[c.id] ?? 0) * 10) / 10;
-      return {
-        id: c.id,
-        nombre: c.nombre,
-        color: this.tema.oscuro() ? c.colorOscuro : c.color,
-        horas,
-        pct: t ? Math.round((horas / t) * 100) : 0,
-        ancho: (horas / max) * 100,
-      };
-    });
+    const sueltas = Math.round((this.porCategoria()['sin_clasificar'] ?? 0) * 10) / 10;
+    const max = Math.max(...categorias.map(c => this.porCategoria()[c.id] ?? 0), sueltas, 0.5);
+
+    const filas = categorias.map(c => ({
+      id: c.id as string,
+      nombre: c.nombre,
+      color: this.tema.oscuro() ? c.colorOscuro : c.color,
+      horas: Math.round((this.porCategoria()[c.id] ?? 0) * 10) / 10,
+      pct: 0,
+      ancho: 0,
+    }));
+
+    // Lo que no cayó en ninguna categoría también son horas del día. Contarlas
+    // en el total y no mostrarlas hacía dos cosas malas a la vez: escondía
+    // trabajo y bajaba el porcentaje de todo lo demás, así que los ocho
+    // números eran menores de lo que correspondía y la suma no daba cien.
+    //
+    // Gris a propósito: no es una categoría más, es la falta de una.
+    if (sueltas > 0) {
+      filas.push({
+        id: 'sin_clasificar',
+        nombre: 'Sin clasificar',
+        color: this.tema.oscuro() ? '#6b7280' : '#9ca3af',
+        horas: sueltas, pct: 0, ancho: 0,
+      });
+    }
+
+    return filas.map(f => ({
+      ...f,
+      pct: t ? Math.round((f.horas / t) * 100) : 0,
+      ancho: (f.horas / max) * 100,
+    }));
   });
 }

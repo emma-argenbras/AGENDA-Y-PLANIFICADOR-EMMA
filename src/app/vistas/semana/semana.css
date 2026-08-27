@@ -34,3 +34,11 @@ td:nth-child(2), td:nth-child(3), th:nth-child(2), th:nth-child(3) { text-align:
   text-align: left;
   cursor: pointer;
 }
+
+/* Cada fragmento suelto, con sus ocho salidas a la vista. */
+.suelto {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--borde);
+}
+.suelto:last-of-type { border-bottom: 0; }
+.suelto .chips { margin-top: 8px; }

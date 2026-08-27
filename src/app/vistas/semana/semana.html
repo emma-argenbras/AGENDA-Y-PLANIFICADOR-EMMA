@@ -111,6 +111,20 @@
 <!-- ── Umbrales ─────────────────────────────────────────────────────────── -->
 <a class="btn ancho" routerLink="/ritual" style="margin-bottom:4px">Cerrar y armar la semana</a>
 
+@if (horasSueltas() > 0) {
+  <div class="tarjeta alerta" style="margin-bottom:12px">
+    <span class="fuerte">{{ duracion(horasSueltas()) }} sin clasificar</span>
+    <p class="mini" style="margin:4px 0 10px">
+      Son horas que registraste y que no cayeron en ninguna de las ocho categorías. Cuentan en el
+      total —por eso los porcentajes de arriba no suman cien— pero no aparecen en ningún lado.
+      Decile a cuál pertenecen y vuelven a su lugar.
+    </p>
+    <button class="btn primario ancho" type="button" (click)="clasificando.set(true)">
+      Ver las {{ sueltos().length }} y clasificarlas
+    </button>
+  </div>
+}
+
 <h2 class="seccion">Umbrales de control</h2>
 @for (u of umbrales(); track u.id) {
   <div class="tarjeta" [class.alerta]="u.resultado.estado === 'rojo'">
@@ -228,4 +242,29 @@
   <p class="mini">Lo que ya está colgado de este objetivo sigue colgado.</p>
   <button pie class="btn primario" type="button" (click)="guardarCorreccion()">Guardar</button>
   <button pie class="btn" type="button" (click)="corrigiendo.set(null)">Cancelar</button>
+</app-dialogo>
+
+<!-- ── Clasificar lo que quedó suelto ───────────────────────────────────── -->
+<app-dialogo [abierto]="clasificando()" titulo="Horas sin clasificar"
+             (cerrar)="clasificando.set(false)">
+  @if (sueltos().length) {
+    <p class="mini">Tocá la categoría a la que pertenece cada una.</p>
+    @for (x of sueltos(); track x.fecha + x.i) {
+      <div class="suelto">
+        <div class="fuerte">{{ x.texto }}</div>
+        <div class="mini">{{ fechaCorta(x.fecha) }} · {{ duracion(x.horas) }}</div>
+        <div class="chips">
+          @for (c of categorias(); track c.id) {
+            <button class="chip" type="button" (click)="asignar(x, c.id)">{{ c.nombre }}</button>
+          }
+        </div>
+      </div>
+    }
+  } @else {
+    <div class="vacio">
+      <div class="titulo">No quedó nada suelto</div>
+      <div class="chico">Todas las horas de la semana están en su categoría.</div>
+    </div>
+  }
+  <button pie class="btn" type="button" (click)="clasificando.set(false)">Cerrar</button>
 </app-dialogo>

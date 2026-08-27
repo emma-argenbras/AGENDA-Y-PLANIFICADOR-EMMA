@@ -12,6 +12,7 @@ import {
   type PlanSemana, type UnidadId,
 } from '../../core/pendientes';
 import { Configuracion } from '../../data/configuracion';
+import type { CategoriaId } from '../../core/reglas';
 import { Datos } from '../../data/datos';
 import { Semaforo } from '../../ui/semaforo';
 import { BarrasCategoria } from '../../ui/graficos/barras-categoria';
@@ -102,12 +103,49 @@ export class Semana {
 
   protected readonly filasNumeros = computed(() => {
     const t = this.totales();
-    return this.cfg.reglas().categorias.map(c => ({
+    const filas = this.cfg.reglas().categorias.map(c => ({
       nombre: c.nombre,
       horas: redondear(t.porCategoria[c.id] ?? 0),
       pct: t.total ? Math.round(((t.porCategoria[c.id] ?? 0) / t.total) * 100) : 0,
     }));
+    const sueltas = t.porCategoria['sin_clasificar'] ?? 0;
+    if (sueltas > 0) {
+      filas.push({
+        nombre: 'Sin clasificar',
+        horas: redondear(sueltas),
+        pct: t.total ? Math.round((sueltas / t.total) * 100) : 0,
+      });
+    }
+    return filas;
   });
+
+  /* ── Rescatar las horas que no cayeron en ninguna categoría ────────────── */
+
+  /**
+   * Un fragmento sin categoría se cuenta en el total y no aparece en ninguna
+   * barra: son horas que la app te tomó y no te muestra. Acá se listan con su
+   * día, para poder decirle a cuál pertenecen.
+   */
+  protected readonly sueltos = computed(() =>
+    this.checkins().flatMap(ck => ck.segmentos
+      .map((s, i) => ({ fecha: ck.fecha, i, texto: s.texto, horas: s.horas, cat: s.categoria }))
+      .filter(x => !x.cat)));
+
+  protected readonly horasSueltas = computed(() =>
+    redondear(this.sueltos().reduce((a, s) => a + s.horas, 0)));
+
+  protected readonly clasificando = signal(false);
+
+  protected async asignar(x: { fecha: string; i: number }, id: CategoriaId): Promise<void> {
+    const ck = this.checkins().find(c => c.fecha === x.fecha);
+    if (!ck) return;
+    await this.datos.guardarCheckin(x.fecha, {
+      ...ck,
+      segmentos: ck.segmentos.map((s, j) => (j === x.i ? { ...s, categoria: id } : s)),
+      actualizado: Date.now(),
+    });
+    this.avisos.mostrar('Asignada. Ya suma donde corresponde.');
+  }
 
   protected mover(semanas: number): void { this.lunes.set(sumarDias(this.lunes(), semanas * 7)); }
 
