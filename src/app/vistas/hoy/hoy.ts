@@ -14,7 +14,7 @@ import { Tema } from '../../ui/tema';
 import { clasificarCheckin, evaluarPrioridad, type Delegacion, type Segmento } from '../../core/clasificador';
 import type { CategoriaId } from '../../core/reglas';
 import { Configuracion } from '../../data/configuracion';
-import { esFinDeSemana, fechaCorta, fechaLarga, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
+import { duracion, esFinDeSemana, fechaCorta, fechaLarga, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
 import { esTuyo, ordenar, type Pendiente } from '../../core/pendientes';
 import { TIPO, aHora, aMinutos, ordenarDia, type Evento } from '../../core/agenda';
 import { estadoPrueba } from '../../core/prueba-luciana';
@@ -241,6 +241,7 @@ export class Hoy {
   });
 
   protected readonly fechaCorta = fechaCorta;
+  protected readonly duracion = duracion;
   protected vencido(cuando: string): boolean { return cuando < this.hoy; }
 
   protected async cumplirCompromiso(reunionId: string, idx: number): Promise<void> {
@@ -414,7 +415,9 @@ export class Hoy {
     this.editor.set({
       ...e,
       segmentos: e.segmentos.map(x =>
-        x === s ? { ...x, horas: Math.min(16, Math.max(0.5, x.horas + delta)) } : x),
+        // De a cuarto de hora: media era demasiado grueso para un día real,
+        // donde las cosas duran quince minutos o tres cuartos.
+        x === s ? { ...x, horas: Math.min(16, Math.max(0.25, redondearCuarto(x.horas + delta))) } : x),
     });
   }
 
@@ -504,4 +507,9 @@ export class Hoy {
     const c = this.cfg.reglas().cat[s.categoria];
     return this.tema.oscuro() ? c.colorOscuro : c.color;
   }
+}
+
+/** Los ajustes caen siempre en un cuarto de hora exacto. */
+function redondearCuarto(h: number): number {
+  return Math.round(h * 4) / 4;
 }

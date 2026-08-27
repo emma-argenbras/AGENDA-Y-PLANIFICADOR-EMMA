@@ -48,7 +48,7 @@
 @if (diaSeleccionado(); as d) {
   <div class="fila sep" style="margin:18px 0 10px">
     <h2 class="seccion" style="margin:0">{{ d.etiqueta }}</h2>
-    <span class="chico tabular">{{ d.horas }} h</span>
+    <span class="chico tabular">{{ duracion(d.horas) }}</span>
   </div>
 
   @if (d.revision) {

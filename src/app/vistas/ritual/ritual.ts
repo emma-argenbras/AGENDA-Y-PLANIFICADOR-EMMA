@@ -19,7 +19,7 @@ import { MAX_OBJETIVOS, type ObjetivoSemana, type PlanSemana, type UnidadId } fr
 import { Configuracion } from '../../data/configuracion';
 import { fugasDelegacion, totalesSemana } from '../../core/clasificador';
 import { UMBRALES } from '../../core/reglas';
-import { diasSemana, esFinDeSemana, fechaCorta, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
+import { diasSemana, esFinDeSemana, fechaCorta, hoyISO, inicioSemana, sumarDias , duracion } from '../../core/fechas';
 
 @Component({
   selector: 'app-ritual',
@@ -29,6 +29,7 @@ import { diasSemana, esFinDeSemana, fechaCorta, hoyISO, inicioSemana, sumarDias 
   styleUrl: './ritual.css',
 })
 export class Ritual {
+  protected readonly duracion = duracion;
   private readonly datos = inject(Datos);
   private readonly avisos = inject(Avisos);
   private readonly router = inject(Router);

@@ -7,7 +7,7 @@ import { Component, computed, inject, resource, ChangeDetectionStrategy } from '
 import { Datos } from '../../data/datos';
 import { Avisos } from '../../ui/avisos';
 import { Configuracion } from '../../data/configuracion';
-import { fechaCorta } from '../../core/fechas';
+import { fechaCorta , duracion } from '../../core/fechas';
 import type { Derivacion } from '../../core/modelo';
 
 @Component({
@@ -20,6 +20,7 @@ export class Delegar {
   private readonly avisos = inject(Avisos);
 
   protected readonly fechaCorta = fechaCorta;
+  protected readonly duracion = duracion;
   private readonly cfg = inject(Configuracion);
 
   protected readonly tabla = computed(() => {

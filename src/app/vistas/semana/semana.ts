@@ -19,7 +19,7 @@ import { ColumnasDia } from '../../ui/graficos/columnas-dia';
 import { LineaTendencia, type PuntoTendencia } from '../../ui/graficos/linea-tendencia';
 import { fugasDelegacion, totalesSemana } from '../../core/clasificador';
 
-import { diasSemana, esFinDeSemana, fechaCorta, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
+import { diasSemana, esFinDeSemana, fechaCorta, hoyISO, inicioSemana, sumarDias , duracion } from '../../core/fechas';
 
 const SEMANAS_TENDENCIA = 8;
 
@@ -37,6 +37,7 @@ export class Semana {
 
   protected readonly hoy = hoyISO();
   protected readonly fechaCorta = fechaCorta;
+  protected readonly duracion = duracion;
   protected readonly lunes = signal(inicioSemana(this.hoy));
   protected readonly categorias = computed(() => this.cfg.reglas().categorias);
   protected readonly verNumeros = signal(false);

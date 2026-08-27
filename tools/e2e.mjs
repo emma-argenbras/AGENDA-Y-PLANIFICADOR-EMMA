@@ -139,12 +139,35 @@ await paso('la categoría forzada no se puede cambiar a mano', async () => {
   if (chipsEnForzado > 0) throw new Error('dejó elegir categoría en un segmento forzado');
 });
 
-await paso('ajusta horas y confirma', async () => {
-  await p.locator('dialog[open] .segmento').first().locator('.horas button').first().click();
+await paso('ajusta de a quince minutos y confirma', async () => {
+  const horas = p.locator('dialog[open] .segmento').first().locator('.horas');
+  const antes = (await horas.locator('.val').textContent()).trim();
+  await horas.locator('button').first().click();
+  // El render es asincrónico: hay que esperar a que el valor cambie, no leerlo
+  // enseguida y concluir que el botón no hizo nada.
+  await p.waitForFunction(
+    t => document.querySelector('dialog[open] .segmento .horas .val')?.textContent?.trim() !== t,
+    antes, { timeout: 10000 });
+  const despues = (await horas.locator('.val').textContent()).trim();
+
+  // Se lee en minutos, no en decimales: nadie anota «0.75 h».
+  if (!/^\d+ min$|^\d+ h( \d+)?$/.test(despues)) {
+    throw new Error('la duración no se lee en minutos: ' + despues);
+  }
+  const aMin = t => {
+    const h = /(\d+) h/.exec(t);
+    const m = /(?:h )?(\d+)(?: min)?$/.exec(t);
+    return (h ? Number(h[1]) * 60 : 0) + (t.includes(' h') && !/h \d/.test(t) ? 0 : Number(m?.[1] ?? 0));
+  };
+  if (aMin(antes) - aMin(despues) !== 15) {
+    throw new Error(`el paso no fue de 15 minutos: ${antes} → ${despues}`);
+  }
+
   await p.click('dialog[open] .pie .btn.primario');
   await sinDialogo();
   await p.waitForSelector('text=Registrado. Esto es lo que quedó');
 });
+
 
 await paso('agenda: se crea un evento y aparece en el día de Hoy', async () => {
   await p.click('#tabs a[href="#/agenda"]');

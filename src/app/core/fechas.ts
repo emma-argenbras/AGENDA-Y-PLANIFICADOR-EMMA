@@ -49,6 +49,19 @@ export function mesLargo(mes: string): string {
   return `${MESES[Number(m) - 1]} ${a}`;
 }
 
+/**
+ * Horas en el idioma en que se piensan. 0,75 se lee «45 min» y 1,25 «1 h 15»:
+ * nadie anota que estuvo cero coma setenta y cinco horas en una reunión.
+ */
+export function duracion(horas: number): string {
+  const min = Math.round(horas * 60);
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (!h) return `${m} min`;
+  if (!m) return `${h} h`;
+  return `${h} h ${m}`;
+}
+
 export function esFinDeSemana(iso: string): boolean {
   const d = new Date(iso + 'T12:00:00').getDay();
   return d === 0 || d === 6;

@@ -204,7 +204,7 @@
             @if (s.delegacion) { · era de {{ s.delegacion.duenoNombre }} }
           </div>
         </div>
-        <span class="chico tabular nowrap">{{ s.horas }} h</span>
+        <span class="chico tabular nowrap">{{ duracion(s.horas) }}</span>
       </div>
     }
     <div class="fila sep" style="margin-top:12px">
@@ -277,7 +277,7 @@
           <div class="mini">{{ d.resumen }}</div>
         </div>
         @if (d.hay) {
-          <span class="chico tabular nowrap">{{ d.horas }} h</span>
+          <span class="chico tabular nowrap">{{ duracion(d.horas) }}</span>
         } @else if (!d.finde) {
           <button class="btn chico" type="button" (click)="diaPasado.set(d.fecha)">Cargar</button>
         }
@@ -341,9 +341,9 @@
         }
 
         <div class="horas">
-          <button type="button" (click)="ajustarHoras(s, -0.5)" aria-label="Menos media hora">−</button>
-          <span class="val tabular">{{ s.horas }} h</span>
-          <button type="button" (click)="ajustarHoras(s, 0.5)" aria-label="Más media hora">+</button>
+          <button type="button" (click)="ajustarHoras(s, -0.25)" aria-label="Quince minutos menos">−</button>
+          <span class="val tabular">{{ duracion(s.horas) }}</span>
+          <button type="button" (click)="ajustarHoras(s, 0.25)" aria-label="Quince minutos más">+</button>
         </div>
       </div>
     }

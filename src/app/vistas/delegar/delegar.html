@@ -14,7 +14,7 @@
   <div class="tarjeta alerta">
     <div class="fila sep">
       <h2 style="margin:0">{{ g.nombre }}</h2>
-      @if (g.horas) { <span class="chico tabular nowrap">{{ g.horas }} h tuyas</span> }
+      @if (g.horas) { <span class="chico tabular nowrap">{{ duracion(g.horas) }} tuyas</span> }
     </div>
     @if (g.rol) { <p class="mini" style="margin:2px 0 0">{{ g.rol }}</p> }
     @for (d of g.items; track d.id) {

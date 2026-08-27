@@ -91,13 +91,49 @@ function mejorMatch<T extends ConPistas>(norm: string, items: readonly T[]): Mat
   return best;
 }
 
-/** Divide "cargué pedidos y fui al banco" en fragmentos clasificables por separado. */
+/**
+ * Separadores que puso alguien a propósito: renglones, puntos, punto y coma.
+ * Un punto entre dígitos no separa nada: es «1.5 h».
+ */
+const SEPARA_FUERTE = /\n+|(?<![0-9])[.;]+(?![0-9])/;
+
+/** Los que hay que adivinar, porque también aparecen dentro de una sola idea. */
+const SEPARA_BLANDO =
+  /,\s*|\s+y\s+|\s+e\s+|\s+\+\s+|\s+tambien\s+|\s+también\s+|\s+ademas\s+|\s+además\s+/i;
+
+const partir = (texto: string, re: RegExp): string[] =>
+  texto.split(re).map(s => s.trim()).filter(s => normalizar(s).length >= 3);
+
+/** ¿El fragmento dice algo por sí solo, o es un pedazo suelto de una frase? */
+function diceAlgo(fragmento: string): boolean {
+  const c = clasificarFragmento(fragmento);
+  return c.categoria !== null || c.delegacion !== null;
+}
+
+/**
+ * Divide el cierre del día en fragmentos clasificables.
+ *
+ * Si separaste vos —con puntos o renglones— se respeta eso y nada más. Antes
+ * se seguía cortando por comas y por «y» aunque hubiera puntos, así que quien
+ * se tomaba el trabajo de separar igual veía sus cosas partidas de nuevo.
+ *
+ * Sin separación explícita hay que adivinar, porque «cargué pedidos y fui al
+ * banco» son dos cosas y hay que contarlas aparte. Pero se parte solo si cada
+ * pedazo dice algo por su cuenta: «reunión con Seba, Luciana y Bruno» son tres
+ * nombres de una misma reunión, no tres reuniones, y partirla repartía las
+ * horas del día entre pedazos que no significan nada.
+ */
 export function segmentar(texto: string): string[] {
-  const partes = (texto || '')
-    .split(/\n+|[;.]+|,\s*|\s+y\s+|\s+e\s+|\s+\+\s+|\s+tambien\s+|\s+también\s+|\s+ademas\s+|\s+además\s+/i)
-    .map(s => s.trim())
-    .filter(s => normalizar(s).length >= 3);
-  return partes.length ? partes : [(texto || '').trim()].filter(Boolean);
+  const limpio = (texto || '').trim();
+  if (!limpio) return [];
+
+  const fuertes = partir(limpio, SEPARA_FUERTE);
+  if (fuertes.length > 1) return fuertes;
+
+  const blandos = partir(limpio, SEPARA_BLANDO);
+  if (blandos.length > 1 && blandos.every(diceAlgo)) return blandos;
+
+  return fuertes.length ? fuertes : [limpio];
 }
 
 /**
@@ -175,7 +211,7 @@ export function clasificarCheckin(texto: string, horasDia = 8): { segmentos: Seg
   const pesoTotal = segmentos.reduce((s, x) => s + Math.max(3, x.texto.length), 0);
   segmentos.forEach(s => {
     const bruto = (Math.max(3, s.texto.length) / pesoTotal) * horasDia;
-    s.horas = Math.max(0.5, Math.round(bruto * 2) / 2); // pasos de media hora
+    s.horas = Math.max(0.25, Math.round(bruto * 4) / 4); // pasos de cuarto de hora
   });
   return { segmentos, horasDia };
 }

@@ -19,7 +19,7 @@ import {
 } from '../../core/agenda';
 import { Configuracion } from '../../data/configuracion';
 import { evaluarPrioridad } from '../../core/clasificador';
-import { diaCorto, diaLargo, diasSemana, fechaCorta, fechaLarga, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
+import { diaCorto, diaLargo, diasSemana, duracion, fechaCorta, fechaLarga, hoyISO, inicioSemana, sumarDias } from '../../core/fechas';
 import { pruebasConRevision } from '../../core/pruebas';
 
 @Component({
@@ -44,6 +44,7 @@ export class Agenda {
   protected readonly fechaLarga = fechaLarga;
   protected readonly diaCorto = diaCorto;
   protected readonly diaLargo = diaLargo;
+  protected readonly duracion = duracion;
 
   protected readonly lunes = signal(inicioSemana(this.hoy));
   protected readonly diaAbierto = signal<string>(this.hoy);
