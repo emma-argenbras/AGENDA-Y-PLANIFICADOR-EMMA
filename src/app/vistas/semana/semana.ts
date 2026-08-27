@@ -18,7 +18,7 @@ import { Semaforo } from '../../ui/semaforo';
 import { BarrasCategoria } from '../../ui/graficos/barras-categoria';
 import { ColumnasDia } from '../../ui/graficos/columnas-dia';
 import { LineaTendencia, type PuntoTendencia } from '../../ui/graficos/linea-tendencia';
-import { fugasDelegacion, totalesSemana } from '../../core/clasificador';
+import { clasificarFragmento, fugasDelegacion, totalesSemana } from '../../core/clasificador';
 
 import { diasSemana, esFinDeSemana, fechaCorta, hoyISO, inicioSemana, sumarDias , duracion } from '../../core/fechas';
 
@@ -135,6 +135,39 @@ export class Semana {
     redondear(this.sueltos().reduce((a, s) => a + s.horas, 0)));
 
   protected readonly clasificando = signal(false);
+  protected readonly reclasificando = signal(false);
+
+  /**
+   * Vuelve a pasar por el clasificador lo que quedó suelto.
+   *
+   * Un fragmento se clasifica cuando se guarda y queda así para siempre, pero
+   * las reglas se mueven: se agregó una pista, se renombró una categoría, se
+   * cambió el dueño de una fila. Lo que no entró con las reglas viejas puede
+   * entrar perfecto con las de ahora, y sin esto había que asignarlo a mano de
+   * a uno aunque la app ya supiera la respuesta.
+   */
+  protected async reclasificar(): Promise<void> {
+    this.reclasificando.set(true);
+    try {
+      let resueltos = 0;
+      for (const ck of this.checkins()) {
+        if (!ck.segmentos.some(s => !s.categoria)) continue;
+        const segmentos = ck.segmentos.map(s => {
+          if (s.categoria) return s;
+          const c = clasificarFragmento(s.texto);
+          if (!c.categoria) return s;
+          resueltos++;
+          return { ...s, categoria: c.categoria, forzada: c.forzada, delegacion: c.delegacion };
+        });
+        if (resueltos) await this.datos.guardarCheckin(ck.fecha, { ...ck, segmentos, actualizado: Date.now() });
+      }
+      this.avisos.mostrar(resueltos
+        ? `${resueltos} volvieron a su categoría.`
+        : 'Ninguna entró sola: hay que decirle a cuál va cada una.');
+    } finally {
+      this.reclasificando.set(false);
+    }
+  }
 
   protected async asignar(x: { fecha: string; i: number }, id: CategoriaId): Promise<void> {
     const ck = this.checkins().find(c => c.fecha === x.fecha);

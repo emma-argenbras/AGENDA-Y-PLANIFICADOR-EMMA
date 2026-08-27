@@ -10,7 +10,7 @@
  * que habilita usar los ocho colores en superficie clara.
  */
 
-import { Component, computed, inject, input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, inject, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { Configuracion } from '../../data/configuracion';
 import { Tema } from '../tema';
 
@@ -21,10 +21,13 @@ import { Tema } from '../tema';
     @if (total() > 0) {
       <div class="lista">
         @for (f of filas(); track f.id) {
-          <div class="fila-cat" [class.cero]="f.horas === 0">
+          <div class="fila-cat" [class.cero]="f.horas === 0"
+               [class.tocable]="f.id === 'sin_clasificar'"
+               (click)="f.id === 'sin_clasificar' && arreglar.emit()">
             <div class="cabeza">
               <span class="nombre">
                 <i class="punto" [style.background]="f.color"></i>{{ f.nombre }}
+                @if (f.id === 'sin_clasificar') { <span class="arreglar">arreglar ›</span> }
               </span>
               <span class="valor tabular">
                 @if (f.horas > 0) { {{ f.horas }} h · {{ f.pct }}% } @else { — }
@@ -53,11 +56,20 @@ import { Tema } from '../tema';
     .pista > i { display: block; height: 100%; border-radius: 5px; min-width: 4px; }
     .fila-cat.cero .nombre, .fila-cat.cero .valor { color: var(--tinta-3); }
     .fila-cat.cero .pista > i { min-width: 0; }
+    .fila-cat.tocable { cursor: pointer; }
+    .fila-cat.tocable .arreglar {
+      margin-left: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--acento);
+    }
   `,
 })
 export class BarrasCategoria {
   readonly porCategoria = input.required<Partial<Record<string, number>>>();
   readonly total = input.required<number>();
+  /** Tocar la fila gris lleva a clasificar lo que quedó suelto. */
+  readonly arreglar = output<void>();
   private readonly tema = inject(Tema);
   private readonly cfg = inject(Configuracion);
 

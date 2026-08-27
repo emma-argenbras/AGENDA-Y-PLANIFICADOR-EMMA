@@ -111,20 +111,6 @@
 <!-- ── Umbrales ─────────────────────────────────────────────────────────── -->
 <a class="btn ancho" routerLink="/ritual" style="margin-bottom:4px">Cerrar y armar la semana</a>
 
-@if (horasSueltas() > 0) {
-  <div class="tarjeta alerta" style="margin-bottom:12px">
-    <span class="fuerte">{{ duracion(horasSueltas()) }} sin clasificar</span>
-    <p class="mini" style="margin:4px 0 10px">
-      Son horas que registraste y que no cayeron en ninguna de las ocho categorías. Cuentan en el
-      total —por eso los porcentajes de arriba no suman cien— pero no aparecen en ningún lado.
-      Decile a cuál pertenecen y vuelven a su lugar.
-    </p>
-    <button class="btn primario ancho" type="button" (click)="clasificando.set(true)">
-      Ver las {{ sueltos().length }} y clasificarlas
-    </button>
-  </div>
-}
-
 <h2 class="seccion">Umbrales de control</h2>
 @for (u of umbrales(); track u.id) {
   <div class="tarjeta" [class.alerta]="u.resultado.estado === 'rojo'">
@@ -140,8 +126,22 @@
 <!-- ── Reparto ──────────────────────────────────────────────────────────── -->
 <h2 class="seccion">En qué se fue la semana</h2>
 <div class="tarjeta">
-  <app-barras-categoria [porCategoria]="totales().porCategoria" [total]="totales().total" />
+  <app-barras-categoria [porCategoria]="totales().porCategoria" [total]="totales().total"
+                        (arreglar)="clasificando.set(true)" />
   @if (totales().total > 0) {
+@if (horasSueltas() > 0) {
+  <div class="tarjeta alerta" style="margin-bottom:12px">
+    <span class="fuerte">{{ duracion(horasSueltas()) }} sin clasificar</span>
+    <p class="mini" style="margin:4px 0 10px">
+      Son horas que registraste y que no cayeron en ninguna de las ocho categorías. Cuentan en el
+      total —por eso los porcentajes de arriba no suman cien— pero no aparecen en ningún lado.
+      Decile a cuál pertenecen y vuelven a su lugar.
+    </p>
+    <button class="btn primario ancho" type="button" (click)="clasificando.set(true)">
+      Ver las {{ sueltos().length }} y clasificarlas
+    </button>
+  </div>
+}
     <button class="btn chico fantasma" type="button" style="margin-top:14px"
             (click)="verNumeros.set(!verNumeros())">
       {{ verNumeros() ? 'Ocultar números' : 'Ver números' }}
@@ -248,7 +248,14 @@
 <app-dialogo [abierto]="clasificando()" titulo="Horas sin clasificar"
              (cerrar)="clasificando.set(false)">
   @if (sueltos().length) {
-    <p class="mini">Tocá la categoría a la que pertenece cada una.</p>
+    <p class="mini">
+      Primero probá con esto: las reglas cambiaron desde que las cargaste, y lo que antes no
+      entraba puede entrar solo ahora.
+    </p>
+    <button class="btn ancho" type="button" [disabled]="reclasificando()" (click)="reclasificar()">
+      {{ reclasificando() ? 'Probando…' : 'Reclasificar con las reglas de ahora' }}
+    </button>
+    <p class="mini" style="margin-top:14px">Y lo que no entre, decile vos a cuál va.</p>
     @for (x of sueltos(); track x.fecha + x.i) {
       <div class="suelto">
         <div class="fuerte">{{ x.texto }}</div>

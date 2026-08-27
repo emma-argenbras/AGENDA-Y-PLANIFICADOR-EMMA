@@ -362,8 +362,14 @@ await paso('semana: lo que no cayó en ninguna categoría se ve y se rescata', a
   const grafico = await p.textContent('app-barras-categoria');
   if (!grafico.includes('Sin clasificar')) throw new Error('el gráfico sigue escondiéndolas');
 
-  await p.click('button:has-text("y clasificarlas")');
+  // Se toca la fila gris del gráfico: el arreglo está donde se ve el problema.
+  await p.click('.fila-cat.tocable');
   await p.waitForSelector('dialog[open] .suelto');
+
+  // Primero la app prueba sola con las reglas de ahora.
+  await p.click('dialog[open] button:has-text("Reclasificar")');
+  await p.waitForSelector('.aviso.visible');
+
   await p.locator('dialog[open] .suelto').first().locator('.chip:has-text("Marketing")').click();
   await p.waitForFunction(
     () => !document.body.textContent.includes('Sin clasificar'), null, { timeout: 10000 });
